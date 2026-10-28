@@ -1,0 +1,1992 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KapitalEats</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rubik:wght@400;500;700&display=swap">
+<style>
+/* Layout: one-screen portrait app. Sticky HUD on top, scrolling screen area, big thumb buttons at the bottom. */
+:root{
+  --bg:#120f1c; --panel:#1c1829; --panel2:#272238; --line:#3a3353;
+  --fg:#f4eefb; --muted:#a099bd;
+  --accent:#ff5a1f; --accent2:#ffd23f; --good:#48e08a; --bad:#ff4d6d; --info:#6cc3ff;
+  --display:'Press Start 2P', 'Courier New', monospace;
+  --body:'Rubik', system-ui, -apple-system, sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent2);outline-offset:2px}
+
+#app{height:100%;max-width:480px;margin:0 auto;display:flex;flex-direction:column;
+  padding-left:max(16px, env(safe-area-inset-left,0px));padding-right:max(16px, env(safe-area-inset-right,0px));padding-block:8px 12px;gap:10px}
+
+/* HUD */
+.hud{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:10px 12px;display:grid;gap:8px}
+.hud-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.logo{font-family:var(--display);font-size:13px;letter-spacing:0;color:var(--accent2);text-shadow:2px 2px 0 #000}
+.logo span{color:var(--accent)}
+.day{font-family:var(--display);font-size:10px;color:var(--muted)}
+.hud-row{display:flex;align-items:center;gap:10px}
+.hud-avatar{font-size:5px;flex:none}
+.money{font-family:var(--display);font-size:15px;color:var(--good);font-variant-numeric:tabular-nums}
+.stats{display:flex;gap:10px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.stats b{color:var(--fg);font-weight:500}
+.goalbar{display:grid;gap:4px}
+.goalbar .lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);gap:8px}
+.goalbar .lbl b{color:var(--fg);font-weight:500;font-variant-numeric:tabular-nums}
+.bar{height:12px;background:#0d0b14;border:2px solid var(--line);border-radius:6px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .5s}
+.flash-up{animation:flashUp .9s}
+.flash-down{animation:flashDown .9s}
+@keyframes flashUp{0%,100%{color:var(--fg)}30%{color:var(--bad)}}
+@keyframes flashDown{0%,100%{color:var(--fg)}30%{color:var(--good)}}
+
+/* Screens */
+main{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
+.screen{display:flex;flex-direction:column;gap:12px;flex:1}
+.screen[hidden]{display:none!important}
+h1,h2,h3{margin:0;text-wrap:balance}
+h2{font-family:var(--display);font-size:13px;line-height:1.6;color:var(--accent2)}
+h3{font-size:17px;font-weight:700}
+p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px;position:relative}
+.card.accent{border-color:var(--accent)}
+.spacer{flex:1}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.actions.one{grid-template-columns:1fr}
+.btn{border:0;border-radius:12px;padding:16px 12px;font-weight:700;font-size:16px;background:var(--panel2);box-shadow:0 4px 0 #0a0810;transition:transform .05s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #0a0810}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.good{background:var(--good);color:#06240f}
+.btn.bad{background:var(--bad);color:#fff}
+.btn.ghost{background:transparent;border:2px solid var(--line);box-shadow:none}
+.btn[disabled]{opacity:.45;cursor:default}
+.tag{display:inline-block;font-size:11px;padding:3px 8px;border-radius:999px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+.tag.up{color:var(--bad);border-color:var(--bad)}
+.tag.down{color:var(--good);border-color:var(--good)}
+.tag.info{color:var(--info);border-color:var(--info)}
+
+/* Start screen */
+.hero{display:grid;place-items:center;gap:8px;padding:12px 0 4px;text-align:center}
+.hero .big{font-family:var(--display);font-size:22px;line-height:1.5;color:var(--accent2);text-shadow:3px 3px 0 var(--accent),6px 6px 0 #000}
+.hero .big span{color:#fff}
+.goals{display:grid;gap:10px}
+.goal{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;text-align:left;background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:12px}
+.goal .emoji{font-size:30px;line-height:1}
+.goal .price{font-family:var(--display);font-size:11px;color:var(--good);font-variant-numeric:tabular-nums;white-space:nowrap}
+.goal.sel{border-color:var(--accent2);background:var(--panel2)}
+.goal .desc{font-size:12px;color:var(--muted)}
+
+/* News */
+.news{border-left:6px solid var(--accent)}
+.news .kicker{font-family:var(--display);font-size:9px;color:var(--bad)}
+.news h3{font-size:19px;line-height:1.3}
+.priceline{display:flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.priceline .old{text-decoration:line-through;color:var(--muted)}
+.priceline .new{font-family:var(--display);font-size:13px}
+
+/* Order ticket */
+.offers{display:grid;gap:14px}
+.ticket.pick{cursor:pointer;transition:transform .1s,opacity .3s}
+.ticket.pick:active{transform:scale(.985)}
+.ticket.dim{opacity:.25}
+.ticket .items{display:grid;gap:2px;font-size:14px}
+.ticket .items span{display:flex;justify-content:space-between;gap:8px}
+.ticket .addr{font-size:13px;line-height:1.4;border-top:1px dashed rgba(0,0,0,.25);border-bottom:1px dashed rgba(0,0,0,.25);padding:6px 0;margin:4px 0}
+.ticket .addr b{font-weight:700}
+.ticket .meta{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;padding-top:6px}
+.ticket .meta .l{font-size:12px;color:#4a4060;line-height:1.4}
+.ticket .fee{font-size:24px;font-weight:700;line-height:1}
+.ticket .pay{display:inline-block;font-size:11px;padding:2px 6px;border:1px solid #1b1626;border-radius:4px;margin:3px 0}
+.ticket .take{margin-top:10px;width:100%;border:0;border-radius:8px;padding:12px;background:#1b1626;color:#f7f1e3;font-weight:700;font-size:15px;font-family:var(--body)}
+.away .big{font-family:var(--display);font-size:14px;line-height:1.8;color:var(--info);text-align:center}
+.ticket{background:#f7f1e3;color:#1b1626;border-radius:6px;padding:14px;position:relative;font-family:'Courier New',monospace;
+  background-image:repeating-linear-gradient(0deg,transparent 0 26px,rgba(0,0,0,.06) 26px 27px)}
+.ticket::before,.ticket::after{content:"";position:absolute;left:0;right:0;height:8px;
+  background:radial-gradient(circle at 6px 0,transparent 5px,#f7f1e3 5.5px) 0 0/12px 8px}
+.ticket::before{top:-6px;transform:scaleY(-1)}
+.ticket::after{bottom:-6px}
+.ticket .rest{font-weight:700;font-size:17px}
+.ticket .row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px dashed rgba(0,0,0,.25);padding:5px 0;font-size:14px}
+.ticket .row:last-of-type{border-bottom:0}
+.ticket .fee{font-size:22px;font-weight:700}
+.ticket .note{font-style:italic;font-size:13px;margin-top:4px;color:#4a4060}
+.stamp{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+.stamp span{font-family:var(--display);font-size:28px;padding:10px 16px;border:6px solid currentColor;border-radius:8px;transform:rotate(-14deg) scale(0);opacity:.92;text-shadow:none;
+  animation:stampIn .35s cubic-bezier(.2,1.6,.4,1) forwards}
+.stamp.ok span{color:#1f8a4c}
+.stamp.no span{color:#c0243f}
+@keyframes stampIn{to{transform:rotate(-14deg) scale(1)}}
+.counter{display:flex;justify-content:space-between;align-items:center}
+.dots{display:flex;gap:5px}
+.dots i{width:10px;height:10px;border-radius:50%;background:var(--panel2);border:1px solid var(--line)}
+.dots i.ok{background:var(--good)}
+.dots i.no{background:var(--bad)}
+.dots i.cur{border-color:var(--accent2);box-shadow:0 0 0 2px var(--accent2) inset}
+
+/* Ride scene */
+.scene{position:relative;height:260px;border-radius:14px;overflow:hidden;border:2px solid var(--line);
+  background:linear-gradient(#1a1440 0%,#3b1d5c 55%,#6b2a63 70%,#2a2140 70.5%)}
+.layer{position:absolute;left:0;right:0;background-repeat:repeat-x}
+.stars{top:0;height:60%;background-image:radial-gradient(1px 1px at 20% 30%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 60% 15%,#fff 50%,transparent 51%),radial-gradient(1.5px 1.5px at 85% 45%,#fff 50%,transparent 51%),radial-gradient(1px 1px at 40% 60%,#fff 50%,transparent 51%);background-size:200px 160px;animation:scroll 18s linear infinite}
+.far{bottom:30%;height:38%;background-image:linear-gradient(#211b3f,#211b3f);background-size:60px 100%;
+  -webkit-mask:linear-gradient(#000 0 0) 0 100%/32px 70% no-repeat,linear-gradient(#000 0 0) 40px 100%/48px 100% no-repeat,linear-gradient(#000 0 0) 100px 100%/28px 55% no-repeat,linear-gradient(#000 0 0) 140px 100%/60px 85% no-repeat;
+  mask:linear-gradient(#000 0 0) 0 100%/32px 70% no-repeat,linear-gradient(#000 0 0) 40px 100%/48px 100% no-repeat,linear-gradient(#000 0 0) 100px 100%/28px 55% no-repeat,linear-gradient(#000 0 0) 140px 100%/60px 85% no-repeat;
+  -webkit-mask-size:220px 100%;mask-size:220px 100%;-webkit-mask-repeat:repeat-x;mask-repeat:repeat-x;animation:scroll 9s linear infinite}
+.near{bottom:30%;height:30%;background-image:repeating-linear-gradient(90deg,#151127 0 50px,transparent 50px 70px,#1a1530 70px 110px,transparent 110px 130px);animation:scroll 4s linear infinite}
+.windows{bottom:34%;height:22%;background-image:radial-gradient(3px 4px at 12px 10px,var(--accent2) 60%,transparent 61%),radial-gradient(3px 4px at 30px 26px,#ffb347 60%,transparent 61%),radial-gradient(3px 4px at 84px 14px,var(--accent2) 60%,transparent 61%);background-size:130px 40px;animation:scroll 4s linear infinite;opacity:.9}
+.road{bottom:0;height:30%;background:#2a2140}
+.road::after{content:"";position:absolute;left:0;right:0;top:45%;height:6px;background:repeating-linear-gradient(90deg,var(--accent2) 0 40px,transparent 40px 80px);animation:scroll 1s linear infinite}
+.curb{bottom:30%;height:6px;background:#4b3f6b}
+@keyframes scroll{to{background-position-x:-400px}}
+.rider{position:absolute;left:50%;bottom:16%;transform:translateX(-50%);font-size:9px;animation:bob .5s ease-in-out infinite alternate}
+@keyframes bob{to{transform:translateX(-50%) translateY(-3px)}}
+.ride-text{text-align:center;font-family:var(--display);font-size:11px;color:var(--muted);line-height:1.8}
+.ride-text .dots-anim::after{content:"";animation:ellipsis 1.2s steps(4) infinite}
+@keyframes ellipsis{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+
+/* Avatar (CSS placeholder pixel courier). Scales with font-size; all sizes in em. */
+.avatar{position:relative;width:16em;height:14em;--helmet:#ff5a1f;--visor:#1a1a2a;--jacket:#2b6cff;--gloves:#222;--scooter:#d33a2c;--bag:#2a2a2a;--skin:#e8b48a}
+.avatar *{position:absolute}
+.av-wheel{width:3.2em;height:3.2em;border-radius:50%;background:#1a1a1a;bottom:0;border:.5em solid #3a3a3a}
+.av-wheel.b{left:1.2em}.av-wheel.f{right:1.2em}
+.av-body{left:2.2em;right:2.2em;bottom:2em;height:2.2em;background:var(--scooter);border-radius:.6em .3em .3em .6em}
+.av-seat{left:4em;bottom:4em;width:4em;height:1em;background:#222;border-radius:.3em}
+.av-front{right:2.6em;bottom:3.6em;width:1.4em;height:4.2em;background:var(--scooter);transform:skewX(-10deg)}
+.av-bar{right:1.4em;bottom:7.4em;width:3.6em;height:.6em;background:#333;border-radius:.3em}
+.av-light{right:1.6em;bottom:5.4em;width:1.2em;height:1.2em;background:#fff2a8;border-radius:50%;box-shadow:0 0 .8em #fff2a8}
+.av-legs{left:6.2em;bottom:3em;width:1.4em;height:2.4em;background:#2a2740;border-radius:.2em}
+.av-foot{left:6em;bottom:2.6em;width:2.2em;height:.8em;background:#111;border-radius:.2em}
+.av-jacket{left:5.6em;bottom:5em;width:3.4em;height:4em;background:var(--jacket);border-radius:.8em .8em .3em .3em}
+.av-zip{left:7.2em;bottom:5.2em;width:.3em;height:3.4em;background:rgba(0,0,0,.35)}
+.av-arm{left:8.4em;bottom:7.4em;width:3.6em;height:1em;background:var(--jacket);transform:rotate(-8deg);border-radius:.5em}
+.av-glove{right:1.6em;bottom:7.6em;width:1.3em;height:1.3em;background:var(--gloves);border-radius:.3em;border:.15em solid rgba(255,255,255,.15)}
+.av-head{left:6em;bottom:8.8em;width:2.6em;height:2.4em;background:var(--skin);border-radius:.4em}
+.av-helmet{left:5.6em;bottom:10em;width:3.4em;height:2.6em;background:var(--helmet);border-radius:1.7em 1.7em .3em .3em;box-shadow:inset -0.6em 0 0 rgba(0,0,0,.2)}
+.av-visor{left:6.6em;bottom:9.6em;width:2.6em;height:1em;background:var(--visor);border-radius:.2em;opacity:.95}
+.av-bag{left:3.2em;bottom:5.6em;width:2.6em;height:3em;background:var(--bag);border-radius:.4em;border:.2em solid rgba(255,255,255,.12)}
+.av-bag::after{content:"K";position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-size:1em;color:var(--accent2)}
+.av-hair{left:6em;bottom:10.4em;width:2.6em;height:.6em;background:#3a2516;display:none}
+.avatar.nohelmet .av-helmet,.avatar.nohelmet .av-visor{display:none}
+.avatar.nohelmet .av-hair{display:block}
+
+/* Event */
+.event-title{font-family:var(--display);font-size:12px;color:var(--info);line-height:1.7}
+.event-text{font-size:17px;line-height:1.5}
+.result-box{background:var(--panel2);border-left:4px solid var(--accent2);padding:10px 12px;border-radius:8px}
+.delta{display:flex;gap:8px;flex-wrap:wrap}
+.delta span{font-variant-numeric:tabular-nums;font-weight:700}
+.delta .plus{color:var(--good)}.delta .minus{color:var(--bad)}
+
+/* Day end + shop */
+.summary{display:grid;grid-template-columns:1fr auto;row-gap:6px;font-variant-numeric:tabular-nums}
+.summary .tot{border-top:2px solid var(--line);padding-top:6px;font-weight:700;font-size:17px}
+.shop{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.item{display:grid;gap:4px;text-align:left;background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:10px;min-width:0}
+.item .sw{width:100%;height:22px;border-radius:6px;border:2px solid rgba(255,255,255,.15)}
+.item .nm{font-weight:700;font-size:14px}
+.item .pr{font-family:var(--display);font-size:10px;color:var(--good)}
+.item .ds{font-size:11px;color:var(--muted)}
+.item.owned{border-color:var(--good)}
+.item.owned .pr{color:var(--muted)}
+.item.eq{border-color:var(--accent2);background:var(--panel2)}
+.item[disabled]{opacity:.5}
+.avatar-stage{display:grid;place-items:center;padding:8px;background:radial-gradient(circle at 50% 70%,#2d2546,transparent 70%)}
+.log{font-size:12px;color:var(--muted);display:grid;gap:4px;max-height:120px;overflow:auto}
+
+.win .big{font-family:var(--display);font-size:16px;line-height:1.8;color:var(--good);text-align:center}
+.win .twist{color:var(--bad);font-weight:700}
+
+/* Weather overlays on the ride scene */
+.wx{position:absolute;inset:0;pointer-events:none;display:none}
+.scene.rain .wx.rain{display:block;background-image:repeating-linear-gradient(115deg,transparent 0 18px,rgba(160,200,255,.45) 18px 20px);background-size:60px 60px;animation:rainfall .35s linear infinite;opacity:.7}
+.scene.snow .wx.snow{display:block;background-image:radial-gradient(2.5px 2.5px at 10px 10px,#fff 60%,transparent 61%),radial-gradient(2px 2px at 40px 30px,#fff 60%,transparent 61%),radial-gradient(2px 2px at 25px 50px,#fff 60%,transparent 61%);background-size:60px 60px;animation:snowfall 1.6s linear infinite;opacity:.85}
+.scene.snow .road{background:#e8ecf5}
+.scene.snow .road::after{background:repeating-linear-gradient(90deg,#8d93a6 0 40px,transparent 40px 80px)}
+.scene.rain{filter:saturate(.8) brightness(.9)}
+.scene.night{filter:brightness(.72) saturate(1.1)}
+.scene.day{background:linear-gradient(#5aa9e6 0%,#9fd0f5 55%,#f7d9a8 70%,#2a2140 70.5%)}
+.scene.day .stars{display:none}
+.scene.day .far{background-image:linear-gradient(#6f86b8,#6f86b8)}
+.scene.day .near{background-image:repeating-linear-gradient(90deg,#4d5a85 0 50px,transparent 50px 70px,#5b6a96 70px 110px,transparent 110px 130px)}
+.scene.day .windows{opacity:.25}
+.scene.day::before{content:"";position:absolute;right:14%;top:12%;width:44px;height:44px;border-radius:50%;background:#fff3b0;box-shadow:0 0 30px #ffe28a}
+.scene.dusk{background:linear-gradient(#2b2a6b 0%,#c2496a 45%,#f39c5a 68%,#2a2140 70.5%)}
+.scene.dusk .stars{opacity:.4}
+.scene.dusk::before{content:"";position:absolute;right:20%;top:46%;width:50px;height:28px;border-radius:50px 50px 0 0;background:#ffb860;box-shadow:0 0 30px #ff9c4a}
+.scene.dusk .windows{opacity:.7}
+.scene.night .windows{opacity:1}
+@keyframes rainfall{to{background-position:-20px 60px}}
+@keyframes snowfall{to{background-position:12px 60px}}
+.wxcard{display:flex;align-items:center;gap:12px}
+.wxcard .ico{font-size:34px;line-height:1}
+.dots i.break{background:var(--info)}
+.fired .big{font-family:var(--display);font-size:18px;line-height:1.8;color:var(--bad);text-align:center}
+.stage{font-size:11px;color:var(--muted)}
+.notif{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;display:flex;gap:8px;align-items:flex-start}
+.notif b{color:var(--accent2);font-weight:500;white-space:nowrap}
+
+/* İç ses (Disco Elysium) */
+.voice{font-style:italic;font-size:14px;line-height:1.5;padding:8px 10px;border-radius:8px;background:#0d0b14;border:1px dashed var(--line)}
+.voice b{font-style:normal;font-family:var(--display);font-size:9px;letter-spacing:0;display:block;margin-bottom:4px}
+.voice.fail b{color:var(--bad)}.voice.ok b{color:var(--good)}
+/* Yorumlar */
+.review{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;display:grid;gap:4px}
+.review .who{font-weight:700;font-size:13px}
+/* Story kartı */
+.story{background:#000;border-radius:14px;overflow:hidden;border:2px solid var(--line);color:#f4f4f4}
+.story-top{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:13px}
+.story-av{width:30px;height:30px;border-radius:50%;background:conic-gradient(var(--accent),var(--accent2),var(--accent))}
+.story-img{display:grid;place-items:center;aspect-ratio:1;max-height:280px;background:radial-gradient(circle at 50% 40%,#3b1d5c,#120f1c 70%)}
+.pxwrap{position:relative}.px{position:absolute;left:0;top:0;background:transparent}
+.story-bar{display:flex;gap:14px;padding:10px 12px;font-size:14px}
+.story-cap{padding:0 12px 8px;font-size:13px}
+/* Kask şekilleri */
+.av-helmet::before,.av-helmet::after{content:"";position:absolute;display:none;bottom:100%;width:1em;height:1em;background:var(--helmet)}
+.av-helmet::before{left:.2em}.av-helmet::after{right:.2em}
+.avatar.h-ears .av-helmet::before,.avatar.h-ears .av-helmet::after{display:block;clip-path:polygon(0 100%,50% 0,100% 100%);height:1.1em}
+.avatar.h-pika .av-helmet::before,.avatar.h-pika .av-helmet::after{display:block;clip-path:polygon(0 100%,50% 0,100% 100%);height:1.6em;width:.8em;background:linear-gradient(#111 0 30%,var(--helmet) 30%)}
+.avatar.h-pika .av-head::before,.avatar.h-pika .av-head::after{content:"";position:absolute;bottom:.3em;width:.6em;height:.6em;border-radius:50%;background:#e8453c}
+.avatar.h-pika .av-head::before{left:.1em}.avatar.h-pika .av-head::after{right:.1em}
+.avatar.h-horns .av-helmet::before,.avatar.h-horns .av-helmet::after{display:block;width:.7em;height:1.4em;background:#e9e2d0;border-radius:.4em .4em 0 0}
+.avatar.h-horns .av-helmet::before{transform:rotate(-20deg);left:-.1em}.avatar.h-horns .av-helmet::after{transform:rotate(20deg);right:-.1em}
+.avatar.h-half .av-helmet{height:1.6em;bottom:10.6em}
+.avatar.h-half .av-visor{display:none}
+
+/* İsim girişi */
+.name-input{width:100%;background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:12px 14px;color:var(--fg);font-family:var(--body);font-size:16px}
+.name-input:focus{outline:none;border-color:var(--accent2)}
+/* Enerji */
+.energy{display:grid;gap:3px}
+.energy .lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.energy .bar{height:8px}
+/* Ses düğmesi */
+.snd{background:transparent;border:1px solid var(--line);border-radius:8px;padding:2px 6px;font-size:14px;line-height:1}
+/* Usta Cemil */
+.svc-head{display:flex;gap:10px;align-items:flex-start}.svc-head .ico{font-size:28px;line-height:1}
+/* Haftalık sertifika */
+.cert{position:relative;background:#f7f1e3;color:#1b1626;border-radius:8px;padding:18px 16px;border:6px double #b8a77a;display:grid;gap:4px;overflow:hidden}
+.cert-head{font-family:var(--display);font-size:14px;color:#8a1c1c;text-align:center;line-height:1.6}
+.cert-sub{text-align:center;font-size:12px;color:#5a4e3a;letter-spacing:.08em;text-transform:uppercase}
+.cert-name{font-family:var(--display);font-size:12px;text-align:center;margin-top:10px;color:#1b1626}
+.cert .summary{color:#1b1626}.cert .summary .tot{border-top-color:#b8a77a}
+.awards{display:grid;gap:8px;margin-top:10px}
+.award{display:flex;gap:10px;align-items:flex-start;background:rgba(0,0,0,.05);border-radius:8px;padding:8px}
+.award .ico{font-size:22px;line-height:1}.award .muted{color:#5a4e3a}
+.cert-stamp{position:absolute;right:12px;bottom:14px;transform:rotate(12deg);font-family:var(--display);font-size:9px;color:#1f8a4c;border:3px solid #1f8a4c;border-radius:6px;padding:6px 8px;text-align:center;opacity:.8;line-height:1.6}
+.cert-stamp span{font-family:var(--body);font-size:10px;text-transform:lowercase}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="hud" id="hud" hidden>
+    <div class="hud-top">
+      <div class="logo">Kapital<span>Eats</span></div>
+      <div style="display:flex;align-items:center;gap:8px"><div class="day" id="hud-day">GÜN 1</div><button class="snd" id="btn-sound" aria-label="Ses">🔊</button></div>
+    </div>
+    <div class="hud-row">
+      <div class="hud-avatar" id="hud-avatar"></div>
+      <div style="display:grid;gap:4px;min-width:0;flex:1">
+        <div class="money" id="hud-money">0 ₺</div>
+        <div class="stats">
+          <span>⭐ <b id="hud-rating">4.6</b></span>
+          <span>📈 Kabul <b id="hud-accept">100%</b></span>
+          <span title="Motor aşınması">🔧 <b id="hud-wear">0%</b></span>
+        </div>
+      </div>
+    </div>
+    <div class="energy">
+      <div class="lbl"><span>⚡ Enerji <b id="hud-energy-txt" style="color:var(--fg);font-weight:500">100</b></span><span id="hud-tariff"></span></div>
+      <div class="bar"><i id="hud-energy"></i></div>
+    </div>
+    <div class="goalbar">
+      <div class="lbl"><span id="hud-goalname">Hedef</span><b id="hud-goalprice">0 ₺</b></div>
+      <div class="bar"><i id="hud-bar"></i></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- START -->
+    <section class="screen" id="s-start">
+      <div class="hero">
+        <div class="big">Kapital<span>Eats</span></div>
+        <p class="muted small">Hayatta kalmak için değil, almak için çalış.</p>
+      </div>
+      <div class="avatar-stage"><div class="avatar" id="start-avatar"></div></div>
+      <p>Sen bir kuryesin. Kiran ödeniyor, karnın tok. Ama bir şey eksik: <b>ihtiyacın olmayan pahalı bir şey.</b> Hedefini seç, mesaiye başla.</p>
+      <h2>Adın Ne?</h2>
+      <input class="name-input" id="name-input" maxlength="16" placeholder="Kurye adı" autocomplete="off">
+      <h2>Hedefini Seç</h2>
+      <div class="goals" id="goals"></div>
+      <div class="actions one"><button class="btn primary" id="btn-start" disabled>Mesaiye Başla</button></div>
+      <button class="btn ghost" id="btn-continue" hidden>Kaldığım yerden devam et</button>
+    </section>
+
+    <!-- NEWS -->
+    <section class="screen" id="s-news" hidden>
+      <h2 id="news-day">GÜN 1 · SABAH BÜLTENİ</h2>
+      <div id="news-list" style="display:grid;gap:10px"></div>
+      <div class="spacer"></div>
+      <div class="actions one"><button class="btn primary" id="btn-news-go">Mesaiye Başla</button></div>
+    </section>
+
+    <!-- ORDER -->
+    <section class="screen" id="s-order" hidden>
+      <div class="counter">
+        <h2 id="order-no">Tur 1/6</h2>
+        <div class="dots" id="order-dots"></div>
+      </div>
+      <div class="notif" id="order-hint"></div>
+      <p class="small muted">Birini seç. Diğerleri başka kuryeye gider, kimse sana kızmaz. Detayları aklında tut, sonra lazım olabilir.</p>
+      <div class="offers" id="offers"></div>
+      <div class="spacer"></div>
+      <div class="actions one"><button class="btn ghost" id="btn-skip">Hiçbirini alma, bu turu geç</button></div>
+    </section>
+
+    <!-- AWAY (çevrimdışı gelir) -->
+    <section class="screen away" id="s-away" hidden>
+      <div class="hero"><div class="big">SEN YOKKEN</div></div>
+      <div class="card" id="away-card"></div>
+      <div class="spacer"></div>
+      <div class="actions one"><button class="btn primary" id="btn-away-go">Devam</button></div>
+    </section>
+
+    <!-- RIDE -->
+    <section class="screen" id="s-ride" hidden>
+      <div class="scene">
+        <div class="layer stars"></div>
+        <div class="layer far"></div>
+        <div class="layer near"></div>
+        <div class="layer windows"></div>
+        <div class="layer road"></div>
+        <div class="layer curb"></div>
+        <div class="wx rain"></div>
+        <div class="wx snow"></div>
+        <div class="rider"><div class="avatar" id="ride-avatar"></div></div>
+      </div>
+      <p class="ride-text" id="ride-text"><span class="dots-anim">Teslimata gidiliyor</span></p>
+    </section>
+
+    <!-- EVENT -->
+    <section class="screen" id="s-event" hidden>
+      <div class="event-title" id="ev-title"></div>
+      <div class="stage" id="ev-stage"></div>
+      <div class="card accent">
+        <p class="event-text" id="ev-text"></p>
+      </div>
+      <div class="spacer"></div>
+      <div id="ev-choices" class="actions one"></div>
+      <div id="ev-result" class="card" hidden>
+        <div class="result-box" id="ev-result-text"></div>
+        <div class="voice" id="ev-voice" hidden></div>
+        <div class="delta" id="ev-delta"></div>
+        <button class="btn primary" id="btn-ev-next">Teslim Et</button>
+      </div>
+    </section>
+
+    <!-- RESULT -->
+    <section class="screen" id="s-result" hidden>
+      <h2 id="res-title">Teslim Edildi</h2>
+      <div class="card">
+        <div class="summary" id="res-summary"></div>
+      </div>
+      <p class="small muted" id="res-note"></p>
+      <div class="spacer"></div>
+      <div class="actions one"><button class="btn primary" id="btn-res-next">Sonraki Sipariş</button></div>
+    </section>
+
+    <!-- DAY END / SHOP -->
+    <section class="screen" id="s-dayend" hidden>
+      <h2 id="de-title">GÜN 1 BİTTİ</h2>
+      <div class="card"><div class="summary" id="de-summary"></div></div>
+      <div id="de-reviews" style="display:grid;gap:8px"></div>
+      <h2>Usta Cemil</h2>
+      <div class="card" id="service"></div>
+      <div class="avatar-stage"><div class="avatar" id="shop-avatar"></div></div>
+      <h2>Kurye Dükkanı</h2>
+      <p class="small muted">Hedefe yaklaşmaz ama iyi görünürsün. Kapitalizm de bu zaten.</p>
+      <div class="shop" id="shop"></div>
+      <div class="actions one"><button class="btn primary" id="btn-sleep">Uyu → Yeni Gün</button></div>
+    </section>
+
+    <!-- WEEK -->
+    <section class="screen" id="s-week" hidden>
+      <div class="cert" id="cert"></div>
+      <div class="spacer"></div>
+      <div class="actions one"><button class="btn primary" id="btn-week-go">Yeni Haftaya</button></div>
+    </section>
+
+    <!-- FIRED -->
+    <section class="screen fired" id="s-fired" hidden>
+      <div class="hero"><div class="big">KOVULDUN</div></div>
+      <div class="avatar-stage"><div class="avatar" id="fired-avatar"></div></div>
+      <div class="card" id="fired-card"></div>
+      <div class="spacer"></div>
+      <div class="actions one"><button class="btn primary" id="btn-fired-again">Başka Bahara</button></div>
+    </section>
+
+    <!-- WIN -->
+    <section class="screen win" id="s-win" hidden>
+      <div class="hero"><div class="big" id="win-big"></div></div>
+      <div class="avatar-stage"><div class="avatar" id="win-avatar"></div></div>
+      <div class="card" id="win-card"></div>
+      <div class="spacer"></div>
+      <div class="actions one"><button class="btn primary" id="btn-again">Yeni Hedef Seç</button></div>
+    </section>
+  </main>
+</div>
+
+<script>
+/* =====================================================================
+   KapitalEats — prototip
+   Bölümler: CONFIG · VERİ (hedefler, hava, haberler, siparişler, OLAYLAR, dükkan)
+             · DURUM · EKRAN AKIŞI · YARDIMCILAR
+   Olay ve haber havuzunu genişletmek için sadece VERİ bölümüne ekleme yap.
+   ===================================================================== */
+
+const CONFIG = {
+  startMoney: 500,          // başlangıç parası (₺)
+  ordersPerDay: 6,          // gün başına düşen sipariş sayısı
+  baseFee: 80,              // sipariş taban ücreti (gerçek: 65-92 ₺; oyun için biraz cömert)
+  feePerKm: 9,              // km başına ücret (gerçek 3,7-4,8 ₺; mesafe kararı anlamlı olsun diye yüksek)
+  bulkFee: 15,              // paketteki her ürün adedi için ek ücret
+  startHour: 12,            // ilk tur saati
+  hoursPerRound: 2,         // her tur saati bu kadar ilerletir
+  nightFrom: 20,            // bu saatten sonra gece tarifesi ve gece olayları
+  nightFeeMult: 1.4,        // gece tarifesi (Trendyol Go: gündüz 64,5 / gece 92 ₺)
+  weekendFeeMult: 1.15,     // hafta sonu tarifesi
+  streakBonusAt: 5,         // üst üste bu kadar teslimatta platform bonusu
+  streakBonus: 150,
+  serviceKm: 140,           // bu kadar km'de aşınma %100 olur (arıza neredeyse kesin)
+  serviceBase: 300,         // Usta Cemil taban fiyatı
+  serviceWearPrice: 7,      // aşınma yüzdesi başına ₺
+  towCost: 450,             // çekici
+  soundKey: 'kapitaleats-sound',
+  maxDistanceKm: 9,
+  eventChance: 0.45,        // kabul edilen siparişte olay çıkma ihtimali (hava × mesafe riski eklenir)
+  offersPerRound: [2,3],    // her turda kaç sipariş teklif edilir (min,max)
+  fuelPerKm: 6,             // benzin: km başına ₺ (teslimatta kesilir)
+  idleCapHours: 8,          // çevrimdışı gelir en fazla bu kadar saat için işler
+  dailyExpense: 120,        // "simit + çay + motor benzini" (gün sonu kesilir)
+  breakCost: 40,            // mola: çay + simit
+  energyMax: 100,           // kurye enerjisi (gün başında dolu)
+  energyBase: 7,            // her teslimatın sabit enerji bedeli
+  energyPerKm: 1.3,         // km başına enerji
+  energyNight: 6,           // gece teslimatı ek bedel
+  energyLow: 30,            // bunun altında "enerji bitiyor" olayı çıkar
+  breakEnergy: 45,          // mola ne kadar enerji verir
+  eatEnergy: 25,            // siparişten yemek ne kadar verir
+  startRating: 4.6,
+  fireRating: 2.0,          // puan bunun altına inerse hesap kapanır
+  maxComplaints: 4,         // bu kadar şikayette hesap kapanır
+  rideMs: 4200,             // sürüş animasyonu süresi
+  stampMs: 650,             // KABUL / RED damgası süresi
+  recentEventMemory: 4,     // son N olay tekrar çıkmaz
+  saveKey: 'kapitaleats-save-v7'
+};
+
+/* ---------------- HEDEFLER ----------------
+   price: başlangıç fiyatı. Haberler cat (kategori) üzerinden fiyatı oynatır. */
+const GOALS = [
+  { id:'iphone', emoji:'📱', art:'phone', name:'iPhone 18 Pro', cat:'tech', price:95000,
+    desc:'Eskisi gayet çalışıyor ama kamerası 0,3 mm daha büyük.' },
+  { id:'tshirt', emoji:'👕', art:'tshirt', name:'Gereksiz Markalı Tasarım Tişört', cat:'fashion', price:14000,
+    desc:'Beyaz. Sadece beyaz. Logosu dikişin içinde, kimse görmüyor.' },
+  { id:'termos', emoji:'🥤', art:'termos', name:'Koleksiyon Termos (Sınırlı Renk)', cat:'lifestyle', price:9500,
+    desc:'Su içmiyorsun ama bu renk bir daha üretilmeyecek.' },
+  { id:'scooter', emoji:'🛴', art:'scooter', name:'Elektrikli Scooter', cat:'tech', price:32000,
+    desc:'Motorun var. Ama bu motor değil, "yaşam tarzı".' }
+];
+
+/* ---------------- HAVA DURUMU ----------------
+   Her gün bir hava vardır. Haberler havayı belirleyebilir (effect.weather),
+   belirlemezse rastgele seçilir (weight). risk: olay ihtimaline eklenir.
+   Olaylar weather:['rain','snow'] ile sadece o havada çıkar. */
+const WEATHER = {
+  sunny: { name:'Güneşli', emoji:'☀️', weight:6, feeMult:1,    risk:0,    blurb:'Hava güzel. Herkes dışarıda, kimse sipariş vermiyor. Yine de veriyorlar.' },
+  rain:  { name:'Yağmurlu', emoji:'🌧️', weight:3, feeMult:1.25, risk:0.15, blurb:'Yol kaygan, siparişler bol. Platform "hava primi" ekledi, sen ıslanma primi alamadın.' },
+  snow:  { name:'Karlı',    emoji:'❄️', weight:1, feeMult:1.5,  risk:0.3,  blurb:'Motor yokuş çıkmıyor, müşteri "kar yağıyor, acele etsene" yazıyor.' }
+};
+
+/* ---------------- HABERLER ----------------
+   effect.priceMult : hedef fiyatını kalıcı çarpar (cat eşleşirse ya da cat:'all')
+   effect.feeMult   : o gün sipariş ücretlerini çarpar
+   effect.tipMult   : o gün bahşişleri çarpar
+   effect.expense   : o gün ek gider (₺)
+   effect.weather   : 'rain' | 'snow' | 'sunny' → o günün havasını belirler
+   effect.tags      : ['etiket'] → olaylar tags:['etiket'] ile bu güne bağlanabilir */
+const NEWS = [
+  { id:'war', kicker:'SON DAKİKA', headline:'Rusya\'da savaş çıktı!', body:'Piyasalar sarsıldı, dolar uçtu. Teknoloji ithalatçıları fiyat listelerini "güncelledi".',
+    cat:'tech', effect:{ priceMult:1.13 } },
+  { id:'rain', kicker:'HAVA', headline:'İstanbul\'a sağanak uyarısı', body:'Kimse dışarı çıkmak istemiyor. Platform "yoğunluk primi" açtı. Sen ıslanıyorsun, algoritma seviniyor.',
+    cat:'all', effect:{ weather:'rain', feeMult:1.1 } },
+  { id:'snow', kicker:'HAVA', headline:'Kar İstanbul\'u esir aldı', body:'Valilik "zorunlu olmadıkça dışarı çıkmayın" dedi. Platform "zorunlu" kelimesini senin için yeniden tanımladı.',
+    cat:'all', effect:{ weather:'snow', feeMult:1.15 } },
+  { id:'heat', kicker:'HAVA', headline:'Sıcak hava dalgası: 41 derece', body:'Kask içinde 48 derece. Dondurma siparişleri patladı, hiçbiri dondurma olarak ulaşmıyor.',
+    cat:'all', effect:{ weather:'sunny', expense:40, tags:['heat'] } },
+  { id:'influencer', kicker:'MAGAZİN', headline:'Ünlü influencer aynı tişörtle 3 gün poz verdi', body:'Marka "beklenmeyen talep" nedeniyle fiyatları yükseltti. Beklemiyorlarmış.',
+    cat:'fashion', effect:{ priceMult:1.2 } },
+  { id:'discount', kicker:'EKONOMİ', headline:'Efsane Cuma indirimleri başladı', body:'Fiyatlar önce %40 artırıldı, sonra %30 indirildi. Sen yine de sevindin.',
+    cat:'all', effect:{ priceMult:0.93 } },
+  { id:'fuel', kicker:'EKONOMİ', headline:'Akaryakıta gece yarısı zammı', body:'Motorun aynı yolu daha pahalıya gidiyor. Platform ücretleri güncellemedi, "inceliyor".',
+    cat:'all', effect:{ expense:80 } },
+  { id:'tipweek', kicker:'TREND', headline:'Sosyal medyada "Kuryeye Bahşiş Haftası"', body:'Herkes kuryesine 50 ₺ verip videosunu çekiyor. Bir hafta sürer, sonra unutulur.',
+    cat:'all', effect:{ tipMult:1.6 } },
+  { id:'color', kicker:'ÜRÜN', headline:'Hedefindeki ürünün yeni rengi çıktı', body:'Aynı ürün, yeni renk, yeni fiyat. Eski renk "klasik" ilan edildi ve o da zamlandı.',
+    cat:'lifestyle', effect:{ priceMult:1.15 } },
+  { id:'derby', kicker:'SPOR', headline:'Bu akşam derbi var', body:'Maç saatinde 40 bin kişi aynı anda pizza istiyor. Restoranlar "hazır" dedi. Değiller.',
+    cat:'all', effect:{ feeMult:1.2, tags:['derby'] } },
+  /* --- Siyasi hiciv --- */
+  { id:'asgari', kicker:'EKONOMİ', headline:'Asgari ücrete %30 zam, enflasyon %60', body:'Bakan: "Hesap ortada." Hesap gerçekten ortada duruyor, kimse almıyor.',
+    cat:'all', effect:{ priceMult:1.08 } },
+  { id:'girisimci', kicker:'SİYASET', headline:'Bakan: "Kuryeler aslında girişimci"', body:'Girişimci olduğunu bugün öğrendin. Girişimin motor, sermayen benzin, çıkış stratejin yok.',
+    cat:'all', effect:{ tags:['girisimci'] } },
+  { id:'vergi', kicker:'MECLİS', headline:'Yeni vergi: "Motokurye Katkı Payı"', body:'Gece yarısı torba yasaya eklendi. Katkı senden, pay onlara. Mecliste "kurye" kelimesi 4 kez geçti, dördünde de "o çocuklar" diye.',
+    cat:'all', effect:{ expense:100 } },
+  { id:'kaldirim', kicker:'BELEDİYE', headline:'Bağdat Caddesi\'nde 3 aylık kaldırım çalışması', body:'Geçen yıl da yapılmıştı. Kaldırım aynı kaldırım, taş farklı, müteahhit akraba. Trafik uzadı, ücretler de.',
+    cat:'all', effect:{ feeMult:1.2 } },
+  { id:'faiz', kicker:'MERKEZ BANKASI', headline:'Faiz kararı açıklandı, kimse anlamadı', body:'Dolar önce düştü, sonra çıktı, sonra "piyasa dengelendi" dendi. Telefon fiyatı dengelenmedi.',
+    cat:'tech', effect:{ priceMult:1.1 } },
+  { id:'boykot', kicker:'EMEK', headline:'Kuryeler kontak kapattı, 3 günlük boykot', body:'Platform "kuryelerimizin yanındayız" açıklaması yaptı, ücretleri de yanında tuttu. Sen bugün çalışıyorsun: ücretler yüksek, vicdan ayrı hesap.',
+    cat:'all', effect:{ feeMult:1.5, tipMult:0.8 } },
+  { id:'af', kicker:'SİYASET', headline:'Vergi affı: 5 milyonun üstü borçlara', body:'Senin 1.200 liralık park cezan kapsam dışı. Kapsam, kapsayanlar için.',
+    cat:'all', effect:{} },
+  { id:'corba', kicker:'SEÇİM', headline:'Seçim öncesi her ilçeye "ücretsiz çorba"', body:'Dağıtımı kuryeler yapıyor. Ücretsiz olan çorba, kurye değil. Afişte aday var, kurye yok.',
+    cat:'all', effect:{ feeMult:1.25, tipMult:0.7 } },
+  { id:'yerli', kicker:'TEKNOLOJİ', headline:'"Yerli ve milli telefon" tanıtıldı', body:'Fiyatı ithal olandan pahalı. Bakan: "Gurur fiyata dahil." Hedefindeki ithal telefon da "dayanışma" adına zamlandı.',
+    cat:'tech', effect:{ priceMult:1.06 } },
+  { id:'quiet', kicker:'GÜNDEM', headline:'Bugün hiçbir şey olmadı', body:'Gazeteler boş sayfa bastı. Fiyatlar yerinde. Şüpheli bir sakinlik.',
+    cat:'all', effect:{} }
+];
+
+/* ---------------- SİPARİŞ PARÇALARI ----------------
+   Restoran: name, tag (fişte görünen slogan), areas (teslimat yaptığı ilçeler), menu.
+   Menü satırı: [emoji, ad, fiyat ₺, solo]  solo:true → tek başına sipariş edilebilir.
+   Fiyatlar 2026 İstanbul paket servis seviyesi (restoran yemeği kişi başı 400-650 ₺). */
+const RESTAURANTS = [
+  { name:'Sushi Çıkmazı', tag:'Taze balık. Dün tazeydi.', areas:['Kadıköy','Ataşehir','Üsküdar'],
+    menu:[['🍣','Sushi set (24 parça)',1450,true],['🍣','Somon roll (8 parça)',520,false],['🍜','Ramen',540,true],['🥟','Gyoza (6 adet)',320,false],['🫛','Edamame',180,false],['🍡','Mochi (3 adet)',170,false]] },
+  { name:'Burger Baronu', tag:'Et %100 dana. Yüzde kaçı et, yazmıyor.', areas:['Beşiktaş','Şişli','Beyoğlu','Kağıthane'],
+    menu:[['🍔','Baron Menü',520,true],['🍔','Cheeseburger',380,false],['🍗','Çıtır tavuk burger',350,false],['🍟','Patates kızartması (42 adet, sayılı)',160,false],['🧅','Soğan halkası',190,false],['🥤','Milkshake',210,false],['🥤','Kola',70,false]] },
+  { name:'Lahmacun Dünyası', tag:'Lahmacunun dünyası. Dünyanın lahmacunu.', areas:['Fatih','Bakırköy','Beyoğlu'],
+    menu:[['🫓','Lahmacun',170,false],['🫓','Fındık lahmacun (10 adet)',650,true],['🧀','Kaşarlı pide',340,true],['🥩','Kıymalı pide',360,false],['🥛','Ayran',50,false],['🍮','Künefe',300,false]] },
+  { name:'Köfteci Yakup', tag:'1962\'den beri aynı köfte. Fiyat hariç.', areas:['Kadıköy','Üsküdar','Maltepe'],
+    menu:[['🥩','Köfte porsiyon',460,true],['🥖','Köfte ekmek',280,false],['🥗','Piyaz',160,false],['🥛','Ayran',50,false],['🍮','İrmik helvası',140,false]] },
+  { name:'Pizza Lokali', tag:'Napoli\'de değiliz. Mahallede bile değiliz.', areas:['Şişli','Beşiktaş','Kağıthane','Sarıyer'],
+    menu:[['🍕','Büyük boy karışık pizza',680,true],['🍕','Orta boy margherita',520,true],['🥖','Sarımsaklı ekmek',180,false],['🍗','Buffalo kanat (8 adet)',340,false],['🥤','Kola 1 L',90,false]] },
+  { name:'Çiğköfte Express', tag:'Acısı sende, parası bizde.', areas:['Fatih','Bakırköy','Pendik','Maltepe'],
+    menu:[['🌯','Çiğköfte dürüm, "çok acılı olmasın"',130,false],['🥣','Çiğköfte porsiyon (500 g)',260,true],['🥤','Şalgam',55,false],['🥛','Ayran',50,false],['🫓','Ekstra lavaş',25,false]] },
+  { name:'Ev Yemekleri Nurten Teyze', tag:'Annenin yaptığı gibi. Annen bu fiyata yapmazdı.', areas:['Üsküdar','Kadıköy','Ataşehir'],
+    menu:[['🍛','Kuru fasulye + pilav',290,true],['🍲','Mercimek çorbası (kapağı gevşek)',120,false],['🍲','Sulu köfte',320,false],['🫒','Zeytinyağlı dolma',240,false],['🍮','Sütlaç',130,false]] },
+  { name:'Kokoreççi Gece Kuşu', tag:'02.00\'den sonra menü aynı, müşteri farklı.', areas:['Beşiktaş','Beyoğlu','Şişli','Kadıköy'],
+    menu:[['🥖','Yarım ekmek kokoreç',350,true],['🥖','Çeyrek ekmek kokoreç',220,false],['🍤','Midye tava',240,false],['🥤','Şalgam',55,false],['🥛','Ayran',50,false]] },
+  { name:'Salata Bar (Vegan)', tag:'Her şey organik. Fiyat da organik büyüdü.', areas:['Kadıköy','Beşiktaş','Şişli'],
+    menu:[['🥗','Kinoa salata',370,true],['🥣','Buddha bowl',450,true],['🥑','Avokadolu tost',310,false],['🥤','Yeşil smoothie',230,false],['🍮','Chia puding',190,false]] },
+  { name:'Kebap-ı Alem', tag:'Bütün yollar Adana\'ya çıkar.', areas:['Fatih','Bakırköy','Kağıthane','Pendik'],
+    menu:[['🍢','Adana porsiyon',480,true],['🍖','İskender',560,true],['🌯','Beyti sarma',520,true],['🫓','Lahmacun',160,false],['🥛','Ayran',50,false],['🍮','Künefe',300,false]] },
+  { name:'Tatlıcı Şekerpare', tag:'Şeker ilaçtır. Dozu biz ayarlarız.', areas:['Kadıköy','Üsküdar','Beşiktaş','Şişli','Fatih'],
+    menu:[['🎂','Doğum günü pastası (hassas)',1500,true],['🍮','Profiterol',280,false],['🍯','Baklava (1 kg)',1100,true],['🍰','Trileçe',200,false],['🍮','Magnolia',190,false]] },
+  { name:'Waffle & Dert', tag:'Çikolata derdi çözmez ama erteler.', areas:['Kadıköy','Beşiktaş','Bakırköy','Maltepe'],
+    menu:[['🧇','Waffle (çilekli, muzsuz)',400,true],['🥔','Kumpir',330,true],['🍋','Limonata',130,false],['🥤','Milkshake',210,false],['🍦','Frozen yoğurt (eriyor)',180,false]] },
+  { name:'Filtre Yok Coffee', tag:'Üçüncü nesil kahve. İkinci nesil fiyat yetmedi.', areas:['Beşiktaş','Şişli','Beyoğlu','Kadıköy','Sarıyer'],
+    menu:[['☕','Filtre kahve',140,true],['☕','Flat white',190,true],['🧊','Iced latte',210,true],['🍰','Cheesecake',290,false],['🥐','Kruvasan',170,false],['🍪','Yulaflı kurabiye',110,false]] },
+  { name:'Döner "Et Varmış"', tag:'Dönerde et var. Yemin ederiz. Noter değiliz.', areas:['Fatih','Kağıthane','Pendik','Ataşehir','Bakırköy'],
+    menu:[['🌯','Döner dürüm',300,false],['🍛','Pilav üstü döner',360,true],['🍖','Et döner porsiyon',520,true],['🥛','Ayran',50,false],['🥤','Kola',70,false]] },
+  { name:'Mantıcı Hanımeli', tag:'El açması. Kimin eli, sormayın.', areas:['Üsküdar','Ataşehir','Maltepe','Pendik','Sarıyer'],
+    menu:[['🥟','Mantı porsiyon',380,true],['🍲','Tarhana çorbası',120,false],['🥛','Ayran',50,false],['🍮','Tel kadayıf',220,false]] }
+];
+const FIRST_NAMES = ['Ayşe','Mehmet','Zeynep','Burak','Elif','Can','Selin','Emre','Deniz','Merve','Kaan','Büşra','Serkan','Gamze','Onur','İrem','Tolga','Ceren','Barış','Pelin'];
+const SURNAME_INITIALS = ['K.','Y.','A.','D.','S.','Ö.','Ç.','T.','B.','G.'];
+const BUILDINGS = ['Apt.','Sitesi B Blok','Apt.','Rezidans','Apt.','Sitesi A Blok','Apt.'];
+/* Notlar: key alanı hafıza olaylarının bağlanacağı anahtar (ör. 'knock' → "kaç kere çaldın?") */
+const NOTES = [
+  {text:'Zili çalmayın, bebek uyuyor.', key:'nobell'},
+  {text:'Kapıya bırakın, temas istemiyorum.', key:'leave'},
+  {text:'{floor}. kat, asansör yok, kolay gelsin :)'},
+  {text:'Bahşiş yarın. Söz.', key:'tiplater'},
+  {text:'Çatal unutmayın!!!'},
+  {text:'Site güvenliğine "Ahmet Bey\'in misafiri" deyin.', key:'guest', value:'Ahmet Bey'},
+  {text:'Site güvenliğine "Nurten Hanım\'ın misafiri" deyin.', key:'guest', value:'Nurten Hanım'},
+  {text:'Güvenliğe "Kemal Bey\'in misafiri" demeniz yeterli.', key:'guest', value:'Kemal Bey'},
+  {text:'Hızlı gelirseniz yorum yazarım.'},
+  {text:'Kapıyı 3 kere çalın, 2 kere değil.', key:'knock', value:3},
+  {text:'Kapıyı 2 kere çalın, 3 kere değil.', key:'knock', value:2},
+  {text:'Zil bozuk, kapıya 4 kere vurun.', key:'knock', value:4},
+  {text:'Köpek ısırmaz. Genelde.'},
+  {text:'Kapıda kedi varsa içeri sokmayın, bizim değil.'},
+  {text:'Ketçap mayonez bol olsun, poşete ayrı koyun, dökülmesin, soğumasın, acele edin, teşekkürler.'},
+  {text:'Lütfen paketi yere koymayın, kapı önündeki sandalyeye bırakın.'},
+  {text:'Toplantıdayım, kapıcıya bırakın. Kapıcı yoksa komşuya. Komşu yoksa bekleyin.'},
+  {text:'Daire {apt}. Kapıda isim yazmıyor, zilde de yazmıyor. Siz bulursunuz.'},
+  {text:'Çocuk uyuyor, köpek uyumuyor. Ona göre.'},
+  {text:'Para üstünü tam verin, geçen kurye 20 ₺ eksik verdi.'},
+  {text:'Bina girişi arka sokaktan. Ön kapı 2019\'dan beri kilitli.'},
+  {text:'Eve geç geleceğim, yine de hemen gönderin.'},
+  {text:'Soğan koymasınlar. Koymuşlarsa siz ayıklayın.'},
+  {text:''},{text:''},{text:''}
+];
+function pickNote(o){
+  let pool = NOTES.filter(n => !S.usedNotes.includes(n.text) || n.text === '');
+  if(pool.length < 4) { S.usedNotes = []; pool = NOTES.slice(); }
+  const n = pick(pool); if(n.text) S.usedNotes.push(n.text);
+  return { text: n.text.replace('{floor}', o.floor).replace('{apt}', o.apt), key: n.key, value: n.value };
+}
+/* İlçeler: dat = -e/-a hali ("Kadıköy'e gidiliyor"), hoods = mahalle/semt, streets = o ilçede gerçekten olan caddeler,
+   tip = bahşiş eğilimi çarpanı, blurb = sürüş ekranında görünen not. */
+const DISTRICTS = [
+  {name:'Kadıköy', dat:"Kadıköy'e", tip:1.1, hoods:['Moda','Caferağa','Fenerbahçe','Göztepe','Caddebostan','Suadiye'],
+    streets:['Bahariye Cad.','Moda Cad.','Bağdat Cad.','Kuşdili Cad.','Mühürdar Cad.','Dr. Esat Işık Cad.'],
+    blurb:'Her sokakta bir kedi, her kedide bir Instagram hesabı.'},
+  {name:'Beşiktaş', dat:"Beşiktaş'a", tip:1.15, hoods:['Abbasağa','Sinanpaşa','Ortaköy','Bebek','Etiler','Levent'],
+    streets:['Barbaros Bulvarı','Ihlamurdere Cad.','Nispetiye Cad.','Cevdetpaşa Cad.','Süleyman Seba Cad.','Akmaz Çeşme Sok.'],
+    blurb:'Yokuş. Yokuşun üstünde yokuş. Maç günü Çarşı\'ya motorla girilmez.'},
+  {name:'Şişli', dat:"Şişli'ye", tip:1.2, hoods:['Nişantaşı','Teşvikiye','Mecidiyeköy','Fulya','Bomonti','Harbiye'],
+    streets:['Halaskargazi Cad.','Rumeli Cad.','Valikonağı Cad.','Abdi İpekçi Cad.','Büyükdere Cad.','Silahşör Cad.'],
+    blurb:'Nişantaşı\'nda park yeri yok, Mecidiyeköy\'de yol yok.'},
+  {name:'Üsküdar', dat:"Üsküdar'a", tip:1.0, hoods:['Kuzguncuk','Çengelköy','Altunizade','Kısıklı','Beylerbeyi','Bağlarbaşı'],
+    streets:['Paşalimanı Cad.','İcadiye Cad.','Hakimiyet-i Milliye Cad.','Çengelköy Cad.','Nuhkuyusu Cad.','Selmani Pak Cad.'],
+    blurb:'Manzara bedava. Yokuş da bedava, sana zimmetli.'},
+  {name:'Ataşehir', dat:"Ataşehir'e", tip:1.05, hoods:['Atatürk Mah.','Barbaros Mah.','İçerenköy','Küçükbakkalköy','Yenisahra','Ferhatpaşa'],
+    streets:['Ataşehir Bulvarı','Mustafa Kemal Cad.','Kayışdağı Cad.','Şenol Güneş Bulvarı','Turgut Özal Bulvarı'],
+    blurb:'Rezidans, site, bariyer, güvenlik. Kapıya ulaşmak dört aşamalı doğrulama.'},
+  {name:'Beyoğlu', dat:"Beyoğlu'na", tip:1.1, hoods:['Cihangir','Galata','Karaköy','Taksim','Kasımpaşa','Tarlabaşı'],
+    streets:['Sıraselviler Cad.','Serdar-ı Ekrem Sok.','Kemankeş Cad.','Tarlabaşı Bulvarı','Yeni Çarşı Cad.','Boğazkesen Cad.'],
+    blurb:'Tek yön, merdiven, turist. Üçü de sana karşı.'},
+  {name:'Bakırköy', dat:"Bakırköy'e", tip:1.0, hoods:['Ataköy','Yeşilköy','Florya','Osmaniye','Zeytinlik','Kartaltepe'],
+    streets:['İncirli Cad.','İstanbul Cad.','Ebuzziya Cad.','Rauf Orbay Cad.','Zeytinlik Cad.','Kennedy Cad.'],
+    blurb:'Sahil yolu düz. Trafik düz değil.'},
+  {name:'Maltepe', dat:"Maltepe'ye", tip:0.95, hoods:['Altayçeşme','Küçükyalı','Cevizli','Zümrütevler','İdealtepe','Bağlarbaşı'],
+    streets:['Bağdat Cad.','Yalı Cad.','Cemal Gürsel Cad.','Atatürk Cad.','Çınar Cad.','Hüseyin Sok.'],
+    blurb:'Bağdat Caddesi\'nin ucuz ucu. Yine de pahalı.'},
+  {name:'Sarıyer', dat:"Sarıyer'e", tip:1.25, hoods:['Yeniköy','İstinye','Tarabya','Maslak','Zekeriyaköy','Rumeli Hisarı'],
+    streets:['Köybaşı Cad.','Büyükdere Cad.','İstinye Bayırı Cad.','Tarabya Bayırı Cad.','Yahya Kemal Cad.','Zekeriyaköy Cad.'],
+    blurb:'Boğaz manzaralı villa. Villanın kapısı 400 metre ileride, zil 200 metre ileride.'},
+  {name:'Pendik', dat:"Pendik'e", tip:0.9, hoods:['Kurtköy','Kaynarca','Yenişehir','Çamçeşme','Batı Mah.','Doğu Mah.'],
+    streets:['Ankara Cad.','Sahil Yolu','Fatih Cad.','Cumhuriyet Cad.','Çamlık Cad.','Şeyhli Cad.'],
+    blurb:'Haritada uzak. Motorda daha uzak.'},
+  {name:'Fatih', dat:"Fatih'e", tip:0.95, hoods:['Sultanahmet','Aksaray','Balat','Fener','Çapa','Fındıkzade'],
+    streets:['Divan Yolu Cad.','Vatan Cad.','Millet Cad.','Vodina Cad.','Ordu Cad.','Fevzi Paşa Cad.'],
+    blurb:'Tarihi yarımada: her sokak tarihi, hiçbir sokak düz.'},
+  {name:'Kağıthane', dat:"Kağıthane'ye", tip:1.0, hoods:['Gültepe','Çağlayan','Seyrantepe','Hamidiye','Merkez','Harmantepe'],
+    streets:['Cendere Cad.','Sadabat Cad.','Talatpaşa Cad.','Çağlayan Cad.','Hamidiye Cad.','Kağıthane Cad.'],
+    blurb:'Plazaların arka bahçesi. 12.30\'da 4.000 kişi aynı anda acıkıyor.'}
+];
+// Sipariş ekranında dönen "platform bildirimleri"
+const PLATFORM_MSGS = [
+  'Bugün 3 teslimat daha yaparsan rozet kazanırsın. Rozet para etmiyor.',
+  'Algoritma seni seviyor. Bugünlük.',
+  'Ortalama kuryeden %2 daha iyisin. Ortalama kurye kim, bilmiyoruz.',
+  'Yeni özellik: artık reddettiğin siparişleri de görebiliyorsun. Pişmanlık modu.',
+  'Hatırlatma: Sen bir "iş ortağısın". Ortaklar sigortalı olmaz.',
+  'Puanın 5 olsaydı bahşişler %4 daha fazla olurdu. Olmadı.',
+  'Teslimat süren harika! Bu cümle otomatik olarak herkese gidiyor.',
+  'Motorun bakımı yaklaştı. Bu bizim sorunumuz değil, sadece bildiriyoruz.',
+  'Yeni: "Kurye Dostu Restoran" rozeti. Rozetli restoranda tuvalet var. Bir tane.',
+  'Anket: Bugün kendini nasıl hissediyorsun? (Cevabın hiçbir şeyi değiştirmez.)',
+  'Gece tarifesi 20.00\'de başlar. Karanlık senin sorunun, biz sadece ödüyoruz.',
+  'Haftanın kuryesi: Sen değilsin. Ama o da sigortalı değil, üzülme.',
+  'Hatırlatma: Yağmurluk dükkanda satılıyor. Yağmur satılmıyor, ücretsiz.'
+];
+
+/* ---------------- İÇ SES ----------------
+   Disco Elysium usulü: olay sonucu kötüyse "başarısız zar", iyiyse "başarılı zar" yorumu.
+   [YETENEK · Durum] metin. İstediğin kadar ekle. */
+const INNER_VOICE = {
+  // [YETENEK, metin, sadece bu olaylarda (isteğe bağlı)]
+  fail: [
+    ['MANTIK','Bu kadar basit bir hesabı yapabilirdin. Yapmadın. Yemek kokusu dikkatini dağıttı.', ['para_ustu']],
+    ['MANTIK','Para üstü. Çıkarma işlemi. İlkokul üç. İlkokul üçü de yapamadın.', ['para_ustu']],
+    ['EMPATİ','Adamın yüzündeki ifadeyi okuyamadın. Yazı değil ki, yüz.'],
+    ['REFLEKS','Vücudun "dur" dedi, sen "gaz" dedin. Vücudun haklıydı. Genelde haklıdır.', ['yagmur_viraj','hizli_ferhat']],
+    ['OTORİTE','Güvenliğe karşı dik durdun. Güvenlik de dik durdu. Onun kulübesi var, senin yok.', ['guvenlik_daire','guvenlik_misafir']],
+    ['OTORİTE','Hayri Abi\'ye kafa tuttun. Hayri Abi 31 yıldır burada. Sen 3 dakikadır.', ['kapici_hayri']],
+    ['İÇ İMPARATORLUK','Bir an kendini sigortalı bir çalışan sandın. Değilsin. Hiç olmadın.'],
+    ['ELEKTROKİMYA','İki lokma. İki. Beynin seni iki lokmaya sattı.', ['enerji_bitiyor']],
+    ['KAYNAK YÖNETİMİ','Benzin gitti, ücret gitti, bahşiş zaten yoktu. Hesap ortada. Sen değilsin.'],
+    ['VÜCUT KONTROLÜ','Motor kaydı. Sen kaydın. Paket kaydı. Ortak nokta: sen.', ['yagmur_viraj','kar_yokus']],
+    ['VÜCUT KONTROLÜ','Bedenin uyarı verdi, verdi, verdi. Sonra vermeyi bıraktı. Sonra seni bıraktı.', ['bayildin']],
+    ['ANSİKLOPEDİ','İstatistiksel olarak bu olacaktı. Sen de biliyordun. Bilmek yetmiyormuş.'],
+    ['DRAMA','Havlulu adama güvendin. Havlulu adamlara güvenilmez, bu bir kuraldır.', ['rakili_musteri']],
+    ['ALGI','Notu okumuştun. Hatırlamadın. Okumakla hatırlamak arasında uçurum var, sen uçurumdasın.', ['kapi_kac_kere','guvenlik_misafir','kapi_kime','guvenlik_daire']],
+    ['ALGI','Köpek kuyruğunu sallıyordu. Sen bunu tehdit sandın. Köpek de seni.', ['dev_kopek']],
+    ['IRADE','Hayır diyebilirdin. Diyemedin. Ağzın "tamam abi" dedi, sen izledin.'],
+    ['MAKİNE BİLGİSİ','Gösterge sarıydı. Sonra kırmızı. Sonra motor konuştu. Üç uyarı, sıfır tepki.', ['motor_ariza']],
+    ['KAVRAM','Yarıştın. Kimle? Ferhat\'la. Neden? Bilinmiyor. Ödül? Yoktu. Bedel? Ayna.', ['hizli_ferhat']]
+  ],
+  ok: [
+    ['REFLEKS','Vücudun seni kurtardı. Beynine haber vermeden.', ['yagmur_viraj','kar_yokus','hizli_ferhat']],
+    ['EMPATİ','Adamın gözündeki yalnızlığı gördün ve bahşişe çevirdin. Bu bir yetenek. Karanlık bir yetenek.', ['rakili_musteri']],
+    ['EMPATİ','Teyzenin böreğini aldın. Teyze mutlu oldu, sen doydun. Kapitalizm bir an için ara verdi.', ['komsu_nebahat']],
+    ['OTORİTE','Sesini çıkardın, kapı açıldı. Not: Bu nadiren işe yarar. Alışma.', ['kapici_hayri','guvenlik_daire']],
+    ['MANTIK','Para üstünü doğru hesapladın. Dört yıl üniversite bunun içindi.', ['para_ustu']],
+    ['İÇ İMPARATORLUK','Bir an mutlu oldun. Kaydet. Bir dahakine kadar idare edecek.'],
+    ['KOMPOZİSYON','Köpeği sevdin, köpek seni sevdi. Hayatın en dürüst alışverişi.', ['dev_kopek']],
+    ['ALGI','Notu hatırladın. Küçük bir zafer. Küçük zaferler sayılır, büyükleri gelmiyor zaten.', ['kapi_kac_kere','guvenlik_misafir','kapi_kime','guvenlik_daire']],
+    ['DAYANIKLILIK','Yürüdün, taşıdın, ulaştın. Motor yapamadı, sen yaptın. Motor senin olsun.', ['kar_yokus','motor_ariza']],
+    ['SAVOIR FAIRE','Yol verdin. Zayıflık değil, stil. Ferhat bunu anlamadı ama bir gün anlayacak.', ['hizli_ferhat']],
+    ['ELEKTROKİMYA','Yedin. Enerji geldi. Vicdan sonra gelir, o yavaştır.', ['enerji_bitiyor']]
+  ]
+};
+function innerVoice(effects, eventId){
+  const e = effects || {};
+  const bad = (e.money<0) || (e.rating<0) || e.feeLost || e.complaint;
+  const good = (e.tip>0) || (e.tipPct>0) || (e.money>0) || (e.rating>0) || (e.giftItem);
+  const choose = (list) => { const specific = list.filter(q => q[2] && q[2].includes(eventId)); const generic = list.filter(q => !q[2]); return pick(specific.length && Math.random() < 0.8 ? specific : generic); };
+  if(bad && Math.random() < 0.75) return { kind:'fail', q: choose(INNER_VOICE.fail) };
+  if(good && !bad && Math.random() < 0.4) return { kind:'ok', q: choose(INNER_VOICE.ok) };
+  return null;
+}
+
+/* ---------------- MÜŞTERİ YORUMLARI ----------------
+   Gün sonunda gösterilir. {item} ürün, {rest} restoran, {name} müşteri adı ile değişir. */
+const REVIEWS = {
+  // {t: metin, w: sadece bu havada (isteğe bağlı), n: sadece gece (isteğe bağlı)}
+  good: [
+    {t:'Kurye kardeşimiz güler yüzlüydü, {item} bile sıcak geldi. Helal olsun. ⭐⭐⭐⭐⭐'},
+    {t:'Abi 15 dakikada geldi, kapıyı da yavaş çaldı, bebek uyanmadı. Bu adamı terfi ettirin. ⭐⭐⭐⭐⭐'},
+    {t:'Notumu okuyan ilk kurye. Ağlayacağım. ⭐⭐⭐⭐⭐'},
+    {t:'Kapıda "afiyet olsun" dedi. Kimse demiyor artık. Bir yıldız fazla ona. ⭐⭐⭐⭐⭐'},
+    {t:'Yağmurda geldi, paket kuruydu, kendisi değildi. Allah razı olsun. ⭐⭐⭐⭐⭐', w:'rain'},
+    {t:'Karda geldi. Karda! Kapıyı açtım kardan adam gibi duruyordu. Çay verdim. ⭐⭐⭐⭐⭐', w:'snow'},
+    {t:'Gece 11\'de geldi, hiç şikayet etmedi. Ben kendime bile bu saatte kızıyorum. ⭐⭐⭐⭐⭐', n:true},
+    {t:'{rest} berbat ama kurye iyiydi. Puan kuryeye. ⭐⭐⭐⭐'},
+    {t:'{kurye} isimli kurye ayakkabısını kapıda çıkardı, halı temiz kaldı. Nadir insan. ⭐⭐⭐⭐⭐'},
+    {t:'Paketi iki eliyle verdi. İki eliyle! Annem bile tek elle verir. ⭐⭐⭐⭐⭐'},
+    {t:'Bahşişi yarın vereceğim demiştim, unuttum. Kurye hatırlatmadı. Centilmen. ⭐⭐⭐⭐⭐', k:'tiplater'},
+    {t:'Asansör bozuktu, {floor}. kata çıktı, nefes nefese "buyrun" dedi. Buyurdum. ⭐⭐⭐⭐⭐', f:4}
+  ],
+  bad: [
+    {t:'40 dakika geç. Mesaj attım, "yoldayım" dedi. Herkes bir yolda. ⭐⭐'},
+    {t:'{item} ılık geldi. Ilık. Ne sıcak ne soğuk. Kurye de öyleydi. ⭐⭐'},
+    {t:'Paketi ters tutmuş. {item} paketin kapağında. Yedim yine de. Puan yedim diye değil. ⭐⭐'},
+    {t:'Kurye kapıda telefonla konuşuyordu, bana "bir saniye" dedi. Ben müşteriyim hocam. ⭐⭐'},
+    {t:'Yağmurdan paket sırılsıklam. Kurye de. İkisine de üzüldüm ama puan paket için. ⭐⭐', w:'rain'},
+    {t:'Gece yarısı zile 5 kere bastı. Bütün apartman uyandı. Komşu beni suçluyor. ⭐', n:true},
+    {t:'{kurye} adlı kurye kapıda bana "abi" dedi. Ben kadınım. ⭐⭐'},
+    {t:'Daireyi bulamamış, 3 kapı çalmış. Komşular artık ne yediğimi biliyor. ⭐⭐'},
+    {t:'Motoru bizim kapının önüne park etmiş. Çıkamadım. Yemeği aldım ama kızgınım. ⭐⭐'}
+  ],
+  meh: [
+    {t:'Geldi, verdi, gitti. Daha ne olsun. ⭐⭐⭐⭐'},
+    {t:'{item} güzeldi, kuryeyi görmedim bile. Puan kuryeye mi yemeğe mi, bilmiyorum. ⭐⭐⭐⭐'},
+    {t:'Normal. Her şey normal. Normal olması tuhaf. ⭐⭐⭐'},
+    {t:'Kurye iyi de {rest} çatal koymamış. Elimle yedim. Puan yarı yarıya. ⭐⭐⭐'},
+    {t:'Bahşiş vermedim çünkü nakit yoktu. Kurye anladı gibi yaptı. İkimiz de yalan söyledik. ⭐⭐⭐⭐'},
+    {t:'Kurye "iyi akşamlar" dedi, saat öğlen 2\'ydi. Yorgun herhalde. ⭐⭐⭐⭐'},
+    {t:'Zamanında geldi. Zamanında gelmek artık 4 yıldız. Enflasyon puanı da vurdu. ⭐⭐⭐⭐'},
+    {t:'Kaskını çıkarmadı. Yüzünü görmedim. Belki de iyi oldu. ⭐⭐⭐'}
+  ]
+};
+function makeReviews(){
+  const list = (S.dayDeliveries || []).slice();
+  shuffle(list);
+  return list.slice(0, 3).map(d => {
+    const ev = d.eventId ? EVENTS.find(e => e.id === d.eventId) : null;
+    const isGood = d.delta > 0 || d.tip > 40, isBad = d.delta < 0 || d.bad;
+    let pool = (isGood ? REVIEWS.good : (isBad ? REVIEWS.bad : REVIEWS.meh)).filter(r => (!r.w || r.w === S.weather) && (!r.n || d.night) && (!r.k || r.k === d.noteKey) && (!r.f || d.floor >= r.f)).map(r => r.t);
+    if(ev && ev.reviews){ if(isBad && ev.reviews.bad) pool = ev.reviews.bad; else if(isGood && ev.reviews.good) pool = ev.reviews.good; }
+    let fresh = pool.filter(t => !S.usedReviews.includes(t)); if(!fresh.length) fresh = pool;
+    const raw = pick(fresh); S.usedReviews.unshift(raw); S.usedReviews = S.usedReviews.slice(0, 24);
+    const t = raw.replace('{item}', d.item.replace(/\s*\(.*?\)/,'')).replace('{rest}', d.rest).replace('{name}', d.customer).replace('{kurye}', S.name).replace('{floor}', d.floor);
+    return { name: d.customer, text: t };
+  });
+}
+
+/* =====================================================================
+   OLAYLAR (RANDOM EVENTS)
+   ---------------------------------------------------------------------
+   Her olay:
+   {
+     id:        'benzersiz_kimlik',
+     title:     'EKRAN BAŞLIĞI',
+     stage:     'Restoranda' | 'Yolda' | 'Apartmanda' | 'Kapıda',   (sadece görünüm)
+     text:      'Oyuncuya okunan durum',
+     weight:    1,                       // seçilme ağırlığı (isteğe bağlı, varsayılan 1)
+     minDay:    1,                       // bu günden önce çıkmaz (isteğe bağlı)
+     weather:   ['rain','snow'],         // sadece bu havalarda çıkar (isteğe bağlı)
+     tags:      ['derby'],               // sadece bu etiketli haber olan günlerde çıkar (isteğe bağlı)
+     priority:  true,                    // şart sağlanınca şans aranmaz, kesin çıkar (isteğe bağlı)
+     condition: (S, order) => true,      // ek şart (isteğe bağlı)
+     choices: [                          // 2 (ya da daha fazla) seçenek
+       {
+         label:   'Buton yazısı',
+         // A) Kesin sonuç:
+         result:  'Olanları anlatan metin',
+         effects: { ... },
+         // B) Şanslı sonuç (result/effects yerine):
+         outcomes: [
+           { chance:0.7, result:'...', effects:{...} },
+           { chance:0.3, result:'...', effects:{...} }
+         ]
+       }
+     ]
+   }
+   effects alanları (hepsi isteğe bağlı):
+     tip:        +₺ sabit bahşiş            tipPct: ücretin yüzdesi kadar bahşiş (0.2 = %20)
+     money:      +/- ₺ (ceza, ödül)          rating: +/- yıldız (ör. 0.2, -0.5)
+     feeLost:    true → sipariş ücreti ödenmez
+     complaint:  true → "müşteri şikayeti" (ek -0.3 yıldız, kabul puanı düşer, şikayet sayacı +1)
+     goalPrice:  çarpan, hedef fiyatını oynatır (ör. 1.05)  — absürt satirik etkiler için
+     breakNext:  true → sonraki sipariş yerine mola verilir
+     streakReset:true → yorgunluk sayacı sıfırlanır
+     skipDelivery: true → teslimat sonuç ekranı atlanır (ör. paket yok oldu)
+   ===================================================================== */
+const EVENTS = [
+  {
+    id: 'dev_kopek',
+    title: 'BAHÇEDE DEV BİR KÖPEK',
+    stage: 'Kapıda',
+    reviews: { good:['Köpeğimi sevdi ya, o an karar verdim. Rex de 5 veriyor. ⭐⭐⭐⭐⭐'], bad:['Paketi bahçeye fırlattı. Köpeğim çorba içti. Bir daha asla. ⭐'] },
+    text: 'Kapıya 10 metre var. Aranızda bir Kangal duruyor. Kuyruğunu mu sallıyor, dişini mi gösteriyor, karanlıkta anlaşılmıyor.',
+    weight: 1,
+    choices: [
+      { label: '🐶 Köpeği sev',
+        result: 'Köpek anında uysallaştı, hatta sana kapıya kadar eşlik etti. Müşteri "Rex normalde kimseyi sevmez" deyip bahşiş bıraktı.',
+        effects: { tip: 60, rating: 0.2 } },
+      { label: '🏃 Paketi bahçeye fırlat ve kaç',
+        result: 'Paket çimlere düştü, çorbanın kapağı açıldı. Köpek çorbayı yedi. Müşteri uygulamadan şikayet etti: "Kurye paketi fırlattı, köpeğim de şişti."',
+        effects: { tip: 0, rating: -0.5, complaint: true } }
+    ]
+  },
+  {
+    id: 'kapi_acilmiyor',
+    title: 'KAPI AÇILMIYOR',
+    stage: 'Kapıda',
+    text: 'Zili üç kez çaldın. Telefon "meşgul". İçeriden dizi sesi geliyor. Uygulama "Teslimat süresi aşılıyor" diye kırmızı yanıp sönüyor.',
+    weight: 1,
+    choices: [
+      { label: '⏳ Bekle, bir kez daha ara',
+        outcomes: [
+          { chance: 0.6, result: 'Dördüncü aramada açtı. "Kulaklık takmıştım, pardon." Pardon kısmı bahşiş olarak gelmedi ama puan verdi.', effects: { rating: 0.1 } },
+          { chance: 0.4, result: '10 dakika bekledin, kimse açmadı. Sonraki siparişin iptal oldu. Algoritma seni "yavaş" olarak işaretledi.', effects: { money: -30, rating: -0.1 } }
+        ] },
+      { label: '🚪 Kapının önüne bırak, fotoğrafla, git',
+        outcomes: [
+          { chance: 0.7, result: 'Fotoğrafı yükledin, "teslim edildi" damgası düştü. Müşteri 20 dakika sonra "Teşekkürler, görmüşüm" yazdı.', effects: { tipPct: 0.1 } },
+          { chance: 0.3, result: 'Komşu paketi aldı. Müşteri "siparişim gelmedi" dedi. Platform ücreti senden kesti. Komşu doydu.', effects: { feeLost: true, complaint: true } }
+        ] }
+    ]
+  },
+
+  /* --- Sistem olayı: enerji bitiyor (mola mekaniği) --- */
+  {
+    id: 'enerji_bitiyor',
+    title: 'ENERJİN BİTİYOR',
+    stage: 'Yolda',
+    priority: true,
+    condition: (S) => S.energy < CONFIG.energyLow && !S.breakNext,
+    reviews: { bad:['{item} eksik geldi. Kurye "restoran öyle verdi" dedi. Restoran "kurye öyle götürdü" dedi. Ben açım. ⭐'] },
+    build: (o, S) => {
+      const food = o.lines.slice().sort((x,y)=>y.price-x.price)[0].name.replace(/\s*\(.*?\)/,'');
+      return {
+        text: `Enerjin ${S.energy}. Gözün kararıyor, elin titriyor, çantadan ${food.toLowerCase()} kokusu geliyor. Uygulama tam bu anda "Harika gidiyorsun! 🎉" bildirimi attı.`,
+        choices: [
+          { label: `🍽️ Siparişten biraz ye`, outcomes: [
+            { chance: 0.7, result: `Bir iki lokma ${food.toLowerCase()}. "Kimse anlamaz" dedin, kimse anlamadı. Hayat bir anlığına güzel.`, effects: { energy: CONFIG.eatEnergy } },
+            { chance: 0.3, result: `Müşteri anladı. Gerçekten anladı. "${food} eksik, paket açılmış." Şikayet, iade, utanç. Ama tok utanç.`, effects: { energy: CONFIG.eatEnergy, complaint: true, rating: -0.6, feeLost: true } } ] },
+          { label: '☕ Sonraki turu atla, mola ver', result: 'Bu teslimattan sonra çay molası. Bir tur gidecek, kabul oranı "mola" diye bir şey tanımıyor. Sen tanıyorsun.', effects: { breakNext: true } },
+          { label: '😤 Dişini sık, devam', result: 'Devam ettin. Enerji aynı, risk büyüdü. Bundan sonraki her kötü ihtimal biraz daha ihtimal.', effects: {} }
+        ]
+      };
+    }
+  },
+  {
+    id: 'bayildin',
+    title: 'BAYILDIN',
+    stage: 'Yolda',
+    priority: true,
+    condition: (S) => S.energy <= 0,
+    reviews: { bad:['Kurye kapıda yere oturdu. Su verdim. Yemeği ben taşıdım içeri. Puan yemeğe. ⭐⭐'] },
+    text: 'Kaldırıma oturdun. Sonra yattın. Bir amca "iyi misin evladım" dedi, bir teyze su uzattı, bir çocuk fotoğraf çekti. Uygulama "teslimat gecikiyor" dedi.',
+    choices: [
+      { label: '🥯 Simit ye, 10 dakika otur', result: 'Simit, su, 10 dakika. Dünya yavaş yavaş geri geldi. Müşteri "neredesin" yazdı, "yerdeyim" yazdın, anlamadı.', effects: { money: -40, energy: 35, rating: -0.2 } },
+      { label: '🚑 Devam etmeye çalış', outcomes: [
+        { chance: 0.5, result: 'Kalktın, bindin, gittin. Nasıl, bilmiyorsun. Teslim ettin, kapıda tekrar oturdun. Müşteri su verdi.', effects: { energy: 20, rating: -0.1 } },
+        { chance: 0.5, result: 'Kalkamadın. Ambulans geldi, serum taktı, 600 ₺ fatura kesti. "Sigortan yok mu?" Yok. "İş ortağı" misin? Evet.', effects: { money: -600, feeLost: true, energy: 50 } } ] }
+    ]
+  },
+
+  /* --- Hava olayları --- */
+  {
+    id: 'yagmur_viraj',
+    title: 'YAĞMURDA KAYGAN VİRAJ',
+    stage: 'Yolda',
+    weather: ['rain'],
+    km: [4, 99],
+    weight: 2,
+    text: 'Asfalt ayna gibi. Önündeki taksi aniden durdu. Fren mi, gaz mı?',
+    choices: [
+      { label: '🛑 Fren, yavaşla',
+        result: 'Yavaşladın, geç kaldın. Müşteri "neredesin?" diye 4 mesaj attı. Hayattasın ama puanın değil.',
+        effects: { rating: -0.2 } },
+      { label: '💨 Gaz, aradan sıyrıl',
+        outcomes: [
+          { chance: 0.6, result: 'Sıyrıldın. Taksici küfretti, sen gülümsedin. Erken teslim, bahşiş.', effects: { tipPct: 0.2 } },
+          { chance: 0.4, result: 'Motor kaydı, paket uçtu, sen de uçtun. Kimse ölmedi. Pizza öldü. Ayna 350 ₺.', effects: { money: -350, feeLost: true, rating: -0.3 } }
+        ] }
+    ]
+  },
+  {
+    id: 'kar_yokus',
+    title: 'MOTOR YOKUŞU ÇIKMIYOR',
+    stage: 'Yolda',
+    weather: ['snow'],
+    weight: 2,
+    text: 'Kar 20 santim. Motor üçüncü denemede de yokuşun yarısında kaldı. Müşteri en tepedeki apartmanda. Telefonda "kar yağıyor, acele etsene" yazıyor.',
+    choices: [
+      { label: '🚶 Motoru bırak, paketle yürü',
+        result: '15 dakika yürüdün. Kapıda kar adamı gibi belirdin. Müşteri önce güldü, sonra utandı, sonra bahşiş verdi.',
+        effects: { tip: 80, rating: 0.1 } },
+      { label: '🏍️ Yokuşu zorla',
+        outcomes: [
+          { chance: 0.5, result: 'Çıktın! Arkadan alkışlayan bir amca vardı. Lastik yarı yarıya gitti ama bu başka günün sorunu.', effects: { tipPct: 0.15 } },
+          { chance: 0.5, result: 'Motor yan yattı, sen kara gömüldün, dondurma karda daha hızlı eridi. Nasıl, bilinmiyor.', effects: { feeLost: true, rating: -0.2, money: -120 } }
+        ] }
+    ]
+  },
+
+  /* --- HAFIZA OLAYLARI (Papers, Please) ---
+     build(order, S) → { text, choices }. Sipariş fişindeki detayı sorar; fiş artık ekranda değil.
+     Yardımcılar: memChoices(doğru, [yanlışlar], doğruSonuç, yanlışSonuç) karıştırılmış seçenek listesi üretir. */
+  {
+    id: 'guvenlik_daire',
+    title: 'SİTE GÜVENLİĞİ',
+    stage: 'Apartmanda',
+    reviews: { bad:['Site güvenliğine daire numarasını bilmiyorum demiş. Nasıl bilmezsin, uygulamada yazıyor. ⭐⭐'] },
+    weight: 2,
+    build: (o) => ({
+      text: `Kulübedeki güvenlik camı araladı: "Hangi daireye?" Telefonun çantanın dibinde, uygulamayı açmak 2 dakika. Adam bekliyor. Kaşları da bekliyor.`,
+      choices: memChoices(
+        `Daire ${o.apt}`, decoyNums(o.apt, 1, 24).map(n=>`Daire ${n}`),
+        { result:'"Buyrun." Kapı açıldı. Güvenlik bir an sana saygıyla baktı. Ya da öyle sandın.', effects:{ rating:0.1 } },
+        { result:'"Öyle bir sipariş yok." Telefonu çıkardın, 3 dakika aradın, doğru daireyi söyledin. Güvenlik "başta söyleseydin" dedi. Müşteri soğuk pizza yedi.', effects:{ rating:-0.3 } }
+      )
+    })
+  },
+  {
+    id: 'guvenlik_misafir',
+    title: 'SİTE GÜVENLİĞİ: "KİMİN MİSAFİRİSİN?"',
+    stage: 'Apartmanda',
+    weight: 3,
+    condition: (S, o) => o.noteKey === 'guest',
+    build: (o) => ({
+      text: `Güvenlik: "Kurye almıyoruz, site kuralı. Misafirsen başka." Müşteri notta ne demişti? Bir isim vardı.`,
+      choices: memChoices(
+        `${o.noteValue}'in misafiriyim`, ['Ahmet Bey','Nurten Hanım','Kemal Bey','Sevgi Hanım'].filter(x=>x!==o.noteValue).slice(0,2).map(x=>`${x}'in misafiriyim`),
+        { result:'Güvenlik hiç sormadan bariyeri açtı. Sistem çalışıyor. Hangi sistem, belli değil.', effects:{ tipPct:0.1 } },
+        { result:'"Öyle biri yok burada." Siteye giremedin. Müşteri aşağı indi, paketi kapıdan aldı, "zahmet oldu bana" dedi.', effects:{ rating:-0.4, complaint:true } }
+      )
+    })
+  },
+  {
+    id: 'kapi_kac_kere',
+    title: 'KAPININ ÖNÜNDESİN',
+    stage: 'Kapıda',
+    reviews: { good:['Notumu okuyan ilk kurye. Doğru sayıda çaldı. Ağlayacağım. ⭐⭐⭐⭐⭐'], bad:['Kapıyı 3 kere çal dedik, yanlış çaldı. Okumuyorlar hocam, okumuyorlar. ⭐⭐'] },
+    weight: 3,
+    condition: (S, o) => o.noteKey === 'knock',
+    build: (o) => ({
+      text: `Zil bozuk. Müşteri notta kapıyı kaç kere çalmanı söylemişti? Bir sayı vardı, bir de "değil" vardı.`,
+      choices: memChoices(
+        `${o.noteValue} kere çal`, [2,3,4].filter(n=>n!==o.noteValue).map(n=>`${n} kere çal`),
+        { result:'Kapı anında açıldı. "Nihayet talimat okuyan bir kurye." Bahşiş.', effects:{ tip:50, rating:0.2 } },
+        { result:'Kapı açıldı ama suratla. "Notu okumadınız mı?" Teslim ettin, puan düştü, komşunun köpeği havladı.', effects:{ rating:-0.3 } }
+      )
+    })
+  },
+  {
+    id: 'kapi_kime',
+    title: '"KİME GELDİ?"',
+    stage: 'Kapıda',
+    reviews: { bad:['Kapıda adımı bilmiyordu. Fişte yazıyor. Okumak bedava. ⭐⭐'] },
+    weight: 2,
+    build: (o) => ({
+      text: `Kapıyı pijamalı bir adam açtı. "Kime geldi bu?" Evde 4 kişi yaşıyor, hepsi sipariş vermiş olabilir. Fişte bir isim vardı.`,
+      choices: memChoices(
+        o.customer, decoyNames(o.customer),
+        { result:'"Benim!" Paketi kaptı, kapıyı kapattı. Teşekkür bile etmedi ama doğruydu.', effects:{ tipPct:0.1 } },
+        { result:'"Burada öyle biri yok." Kapı kapandı. Tekrar çaldın, "haa, o kız" dedi. 4 dakika kaybettin, güven de kaybettin.', effects:{ rating:-0.2 } }
+      )
+    })
+  },
+  {
+    id: 'para_ustu',
+    title: 'PARA ÜSTÜ',
+    stage: 'Kapıda',
+    reviews: { good:['Para üstünü kuruşu kuruşuna verdi. Saydım, doğru. Bir daha saydım, yine doğru. ⭐⭐⭐⭐⭐'], bad:['Para üstünü yanlış verdi, sonra "abi tamam" dedi. Tamam değil. ⭐'] },
+    weight: 4,
+    condition: (S, o) => o.payment === 'nakit',
+    build: (o) => {
+      const paid = Math.ceil(o.total/500)*500 + (Math.random()<0.5?500:0);
+      const change = paid - o.total;
+      return {
+        text: `Müşteri ${fmt(paid)} uzattı. "Üstü kalsın demiyorum." Sipariş tutarı neydi? Hesap sende.`,
+        choices: memChoices(
+          `${fmt(change)} üstü ver`, decoyNums(change, 0, paid, 10).map(n=>`${fmt(n)} üstü ver`),
+          { result:'Kuruşu kuruşuna. Müşteri saydı, saydı, bir daha saydı. "Tamam" dedi. Bu iltifat.', effects:{ rating:0.1 } },
+          { result:'Yanlış verdin. Fazlaysa cebinden gitti, eksikse müşteri "dolandırıcı" diye yorum yazdı. İkisi de oldu gibi hissettin.', effects:{ money:-Math.min(300, Math.round(change*0.5)+40), rating:-0.3 } }
+        )
+      };
+    }
+  },
+
+  /* --- MOTOR ARIZASI (aşınma %50 üstünde çıkabilir, %100'de kesin) --- */
+  {
+    id: 'motor_ariza',
+    title: 'MOTOR ÖKSÜRDÜ',
+    stage: 'Yolda',
+    condition: (S) => wear() >= 50 && (wear() >= 100 || Math.random() < (wear()/100) * (wear()/100)),
+    priority: true,
+    reviews: { bad:['Kurye motoru iterek geldi. Terli, geç, ama geldi. Yemek soğuktu, hikaye sıcaktı. ⭐⭐'] },
+    build: (o, S) => ({
+      text: `Motor önce öksürdü, sonra sustu. ${wear() >= 100 ? 'Bu sürpriz değildi. Aşınma %100 yazıyordu, sen "bir tur daha" dedin.' : `Aşınma %${wear()}. Gösterge aylardır sarıydı, sen renk körü gibi davrandın.`} Müşteri ${o.km} km ötede.`,
+      choices: [
+        { label: '🦵 Tekmele, tekrar çalıştır', outcomes: [
+          { chance: 0.55, result: 'Üçüncü tekmede çalıştı. Nasıl, bilmiyorsun. Motor da bilmiyor. İkiniz de sormuyorsunuz.', effects: { wearAdd: 5 } },
+          { chance: 0.45, result: 'Çalışmadı. Çekici çağırdın. Çekici ustası "bunu kim satmış sana" dedi. Mirastı. Paket iade.', effects: { money: -CONFIG.towCost, feeLost: true, rating: -0.2, wearSet: 40 } } ] },
+        { label: '🔧 Yolda bir usta bul, acil tamir', result: 'Köşedeki tamirci "Cemil Usta" bujiyi değiştirdi, 250 ₺ aldı, "esas bakım lazım buna" dedi. Haklı. Herkes haklı, kimse ödemiyor.', effects: { money: -250, rating: -0.1, wearSet: 35 } }
+      ]
+    })
+  },
+  /* --- RAKİP KURYE: Hızlı Ferhat (S.ferhat karşılaşma, S.ferhatYield yol verme sayısı) --- */
+  {
+    id: 'hizli_ferhat',
+    title: 'HIZLI FERHAT',
+    stage: 'Yolda',
+    weight: 2,
+    reviews: { good:['İki kurye aynı anda geldi, bizimki önce kapıyı çaldı. Yarışı seviyorum. ⭐⭐⭐⭐⭐'] },
+    build: (o, S) => {
+      const n = S.ferhat || 0, y = S.ferhatYield || 0;
+      if(n >= 3 && y >= 2) return {
+        text: `Hızlı Ferhat yanına yanaştı, bu kez gaz vermeden. "Hep yol verdin bana. Dinle: ${o.hood} tarafına giderken şu arka sokaktan gir, 6 dakika kazanırsın. Kimseye söyleme." Söyledi, gitti.`,
+        choices: [
+          { label: '🗺️ Arka sokağı dene', result: 'Sokak gerçekten vardı. 6 dakika erken kapıdaydın. Müşteri "siz hep böyle hızlı mısınız" dedi. Hayır. Ferhat öyle.', effects: { tipPct: 0.25, rating: 0.2, ferhat: 'yield' } },
+          { label: '🤨 Güvenme, bildiğin yoldan git', result: 'Bildiğin yoldan gittin. Normal vardın. Ferhat\'ın sokağını hiç öğrenemeyeceksin. Belki de yoktu.', effects: { ferhat: 'race' } }
+        ]
+      };
+      if(n >= 3 && y === 0) return {
+        text: `Hızlı Ferhat seni gördü, gülmedi. "Üç kere yarıştın benimle, üçünde de kabalık ettin." Önüne kırdı, aynı restorana sen varmadan girdi. Senin paketi aldı mı?`,
+        choices: [
+          { label: '🏃 Restorana koş, paketini iste', outcomes: [
+            { chance: 0.5, result: 'Yetiştin. Paket tezgahtaydı, Ferhat yoktu. Garson "arkadaşın mı" dedi. Değil.', effects: { ferhat: 'race' } },
+            { chance: 0.5, result: 'Paketin gitmişti. Ferhat "yanlışlıkla" almış. Platform ücreti sana ödemedi, müşteri yine de yedi.', effects: { feeLost: true, ferhat: 'race' } } ] },
+          { label: '😮‍💨 Boş ver, Ferhat kazandı', result: 'Boş verdin. Sonraki paket için 8 dakika bekledin. Ferhat kapıdan çıkarken selam verdi. Nazikçe. Daha kötü.', effects: { rating: -0.1, ferhat: 'yield' } }
+        ]
+      };
+      return {
+        text: `${n === 0 ? 'Yanına bir motor yanaştı. Kask siyah, çanta mavi, yüz tanıdık değil. "Hızlı Ferhat derler, aynı yere gidiyoruz galiba."' : `Hızlı Ferhat yine yanında. ${n}. karşılaşma. "Yine mi sen?" Evet, yine sen.`} Işık kırmızı. Yeşil yanınca ne olacak, ikiniz de biliyorsunuz.`,
+        choices: [
+          { label: '🏁 Yarış', outcomes: [
+            { chance: 0.5, result: 'Yeşilde sen çıktın, virajda sen döndün, kapıyı sen çaldın. Ferhat arkadan "iyiydin" dedi. Motor bu yarışı sevmedi.', effects: { tipPct: 0.15, rating: 0.1, wearAdd: 8, ferhat: 'race' } },
+            { chance: 0.5, result: 'Ferhat çıktı, sen çıkamadın. Bir de kaldırıma sürttün. Ayna çizildi, gurur çizildi, paket sağlam.', effects: { money: -60, wearAdd: 10, ferhat: 'race' } } ] },
+          { label: '🫡 Yol ver', result: 'Yol verdin. Ferhat şaşırdı, başını salladı, gitti. Bir dakika geç kaldın. Belki bir gün bunun karşılığı olur. Belki de Ferhat seni hatırlamaz bile.', effects: { ferhat: 'yield' } }
+        ]
+      };
+    }
+  },
+
+  /* --- TEKRARLAYAN KARAKTERLER ---
+     Kapıcı Hayri Abi: tavrı puanına göre değişir, seni hatırlar (S.hayri = karşılaşma sayısı).
+     Komşu Nebahat Teyze: sana acır, börek ya da para verir (S.nebahat = yakınlık). */
+  {
+    id: 'kapici_hayri',
+    title: 'KAPICI HAYRİ ABİ',
+    stage: 'Apartmanda',
+    weight: 2,
+    build: (o, S) => {
+      const n = S.hayri || 0;
+      const greet = n === 0 ? 'Kapıcı dairesinden bir kafa uzandı: "Hayri ben. Burada ben varım, asansör var, kural var."' :
+                    n < 3 ? `Hayri Abi seni tanıdı. "Yine sen, ${S.name}. ${n+1}. geliş."` : `Hayri Abi seni gördü, gözlerini kıstı. "${S.name}, ${n+1} kere geldin, bir kere çay içmedin."`;
+      // 4. karşılaşmadan sonra, puanın iyiyse Hayri Abi arada hediye verir (eski ama sağlam bir eşya)
+      if(n >= 3 && S.rating >= 4.0 && Math.random() < 0.5) return {
+        text: `${greet} Sonra kapıcı dairesine girdi, bir poşetle çıktı. "Bizim oğlandan kaldı. Sana olur. Reddetme, ayıp olur."`,
+        choices: [
+          { label: '🎁 Al, teşekkür et', result: 'Aldın. Hayri Abi "giy bakayım" dedi, giydin, "oldu" dedi. Oldu. Bu apartmanda artık bir yerin var.', effects: { giftItem: true, hayri: 1, rating: 0.1 } },
+          { label: '🙏 "Olmaz Hayri Abi, oğlunun"', result: '"Oğlan Almanya\'da, lazım değil." Poşeti yine de uzatmadı, geri koydu. Kırıldı mı, belli değil. Hayri Abi\'de hiçbir şey belli değil.', effects: { hayri: 1 } }
+        ]
+      };
+      if(S.rating >= 4.2) return {
+        text: `${greet} Puanını duymuş. "Diyorlar ki sen iyi kuryeymişsin. Gel, asansörü tuttum, kapıya kadar çıkarır seni."`,
+        choices: [
+          { label: '🛗 Asansöre bin, teşekkür et', result: 'Hayri Abi düğmeye bastı, yolda hava durumunu anlattı. 3. katta "bizim oğlan da kuryeydi" dedi, sustu. Kapıda müşteri bekliyordu, bahşiş hazırdı.', effects: { tipPct: 0.15, rating: 0.1, hayri: 1 } },
+          { label: '☕ "Bir çay içelim Hayri Abi"', outcomes: [
+            { chance: 0.6, result: 'Çay ince belli bardakta, şeker iki. Hayri Abi anlattı, sen dinledin. Müşteri 10 dakika bekledi ama "kapıcıyla çay içen kuryeye kızılmaz" dedi.', effects: { rating: 0.1, hayri: 2, streakReset: true } },
+            { chance: 0.4, result: 'Çay bir oldu, iki oldu. Müşteri aşağı indi, kapıcı dairesinde kuryesini buldu. "Siz burada mısınız?" Evet, buradaydınız.', effects: { rating: -0.3, hayri: 2 } } ] }
+        ]
+      };
+      if(S.rating < 3.5) return {
+        text: `${greet} Kaşları çatık. "Kurye asansöre binmez. Kural. Hem senin puanını da gördüm, yürü."`,
+        choices: [
+          { label: '🚶 Yürü (Kat ' + o.floor + ')', result: `${o.floor} kat yürüdün. ${o.floor > 4 ? 'Nefes nefese kapıyı çaldın, müşteri "koşarak mı geldiniz" dedi. Evet.' : 'Çok değildi ama prensip meselesiydi. Prensip kaybetti.'}`, effects: { rating: -0.1, hayri: 1 } },
+          { label: '🗣️ "Abi ben de insanım"', outcomes: [
+            { chance: 0.4, result: 'Hayri Abi durdu, baktı, "haklısın" dedi. Asansörü çağırdı. Bir daha olmayacak ama bu seferlik oldu.', effects: { rating: 0.1, hayri: 1 } },
+            { chance: 0.6, result: 'Hayri Abi yönetimi aradı. Yönetim platformu aradı. Platform seni aradı. "Kapıcıyla tartışma" diye bir madde varmış.', effects: { complaint: true, hayri: 1 } } ] }
+        ]
+      };
+      return {
+        text: `${greet} Sana baktı, çantaya baktı. "Bu saatte ${o.lines[0].name.toLowerCase()} mi? Kat ${o.floor}. Asansör bozuk değil ama yavaş. Senin gibi."`,
+        choices: [
+          { label: '🙂 "Sağ ol Hayri Abi"', result: 'Hayri Abi başını salladı. Bu, Hayri Abi dilinde "tamam" demek. İlişki ilerliyor. Yavaş. Asansör gibi.', effects: { hayri: 1 } },
+          { label: '😐 Hiçbir şey deme, geç', result: 'Geçtin. Hayri Abi arkandan "selam da vermiyorlar" dedi. Duydun. Duymazdan geldin. O da bunu duydu.', effects: { hayri: 1, rating: -0.05 } }
+        ]
+      };
+    }
+  },
+  {
+    id: 'komsu_nebahat',
+    title: 'KOMŞU NEBAHAT TEYZE',
+    stage: 'Apartmanda',
+    weight: 1,
+    build: (o, S) => {
+      const n = S.nebahat || 0;
+      if(n === 0) return {
+        text: 'Yan kapı aralandı. Terlikli, önlüklü bir teyze başını uzattı. "Evladım, kurye misin sen? Yüzün sapsarı olmuş. Dur, bir dakika bekle."',
+        choices: [
+          { label: '🫓 Bekle', result: 'Folyoya sarılı sıcak börek uzattı. "Bütün gün bir şey yemediğini yüzünden anladım." Haklıydı. Bugünkü yemek parası cepte kaldı, enerjin de yerine geldi.', effects: { expense: -60, energy: 20, nebahat: 1, rating: 0.05 } },
+          { label: '🏃 "Acelem var teyze, sağ olun"', result: '"Sizin hep aceleniz var." Kapı kapandı. Börek kokusu merdivende kaldı. Sen de bir saniye orada kaldın.', effects: { nebahat: 0 } }
+        ]
+      };
+      if(n < 3) return {
+        text: `Nebahat Teyze kapıyı açtı, seni görünce güldü. "Sarı yüzlü ${S.name}! Gel, gel." Bu ${n+1}. karşılaşmanız. Elinde bir poşet var.`,
+        choices: [
+          { label: '🍲 Poşeti al', result: 'Poşette kuru fasulye, pilav, bir de "torunuma almıştım, kalmış" dediği bir çikolata. Torunu yok. Sen de biliyorsun, o da biliyor. İkiniz de bir şey demiyorsunuz.', effects: { expense: -120, energy: 25, nebahat: 1 } },
+          { label: '💬 İki laf et, poşeti alma', result: '"Almıyorsun demek." Biraz kırıldı ama gülümsedi. Rahmetli eşini anlattı: o da kuryeymiş, 1974\'te, at arabasıyla. Sen dinledin. Müşteri bekledi.', effects: { nebahat: 1, rating: 0.1 } }
+        ]
+      };
+      return {
+        text: 'Nebahat Teyze seni bekliyormuş. "Gel oğlum, gel." Avucuna katlanmış bir kağıt sıkıştırdı: 200 lira. "Hayır deme. Emekli maaşımdan değil, kiracıdan geldi."',
+        choices: [
+          { label: '🙏 Al, elini öp', result: 'Aldın, elini öptün. "Motora dikkat et" dedi. Herkes der. Nebahat Teyze dediğinde farklı oluyor.', effects: { money: 200, nebahat: 1, rating: 0.05 } },
+          { label: '🚫 "Olmaz teyze, almam"', result: '"Alırsın." Parayı çantanın ön cebine koydu, fermuarı çekti. Konu kapandı. Nebahat Teyze\'yle tartışılmaz, bunu bütün apartman bilir.', effects: { money: 200, nebahat: 1 } }
+        ]
+      };
+    }
+  },
+
+  /* --- Gece / hafta sonu olayları (tags:['night'] gece tarifesinde, ['weekend'] hafta sonu) --- */
+  {
+    id: 'rakili_musteri',
+    title: '"KARDEŞİM SEN DE OTUR"',
+    stage: 'Kapıda',
+    reviews: { good:['Oturdu, dinledi, gitti. Adam gibi adam. Kardeşim benim. ⭐⭐⭐⭐⭐'], bad:['Kurye evimde uyuyakaldı. Ben de uyudum. Sabah ikimiz de şaşırdık. ⭐⭐'] },
+    tags: ['night'],
+    weight: 2,
+    text: 'Kapıyı açan adamın üstünde havlu, elinde rakı kadehi, arkasında Müslüm Gürses. "Kardeşim yoruldun, otur iki dakika." Teslimat süresi akıyor.',
+    choices: [
+      { label: '🥃 İki dakika otur',
+        outcomes: [
+          { chance: 0.6, result: 'İki dakika 25 dakika oldu. Boşanmasını, kayınpederini ve 1998 Galatasaray kadrosunu dinledin. Cebine 200 ₺ sıkıştırdı. "Sana değil, hayata."', effects: { tip: 200, rating: 0.2 } },
+          { chance: 0.4, result: 'Oturdun. Adam uyuyakaldı. Sonraki siparişin iptal oldu, uygulama seni "yanıt vermiyor" diye işaretledi.', effects: { money: -60, rating: -0.2 } }
+        ] },
+      { label: '🙏 "Sağ olun abi, sipariş var"',
+        result: '"Haklısın, çalış çalış." Kapıyı kapattı, Müslüm devam etti. Bahşiş yok ama saygı var. Saygı, dükkanda geçmiyor.',
+        effects: { tipPct: 0.05 } }
+    ]
+  },
+  {
+    id: 'kedi_konseyi',
+    title: 'MERDİVENDE KEDİ KONSEYİ',
+    stage: 'Apartmanda',
+    tags: ['night'],
+    weight: 1,
+    text: 'Üçüncü kat sahanlığında yedi kedi oturuyor. Yedisi de sana bakıyor. Elinde kokoreç kokusu yayan bir çanta.',
+    choices: [
+      { label: '🐈 Bir parça ekmek ucu at, geç',
+        result: 'Kediler ikna oldu, sen geçtin. Gramaj %2 eksildi, kimse fark etmedi. Kediler artık seni tanıyor. Bu iyi mi, belli değil.',
+        effects: { rating: 0.1 } },
+      { label: '🚶 Aradan sıyrıl',
+        outcomes: [
+          { chance: 0.7, result: 'Sıyrıldın. Biri bacağına sürtündü, biri tısladı. Demokrasi.', effects: {} },
+          { chance: 0.3, result: 'Turuncu olan çantaya atladı. Çanta düştü, şalgam açıldı, merdiven mor oldu. Kapıcı seni suçladı.', effects: { money: -80, rating: -0.2 } }
+        ] }
+    ]
+  },
+  {
+    id: 'dugun_konvoyu',
+    title: 'DÜĞÜN KONVOYU',
+    stage: 'Yolda',
+    tags: ['weekend'],
+    weight: 2,
+    text: 'Yolu bir düğün konvoyu kesmiş. On iki araba, bir davul, bir Doblo. Korna ritmik. Kimse kıpırdamıyor.',
+    choices: [
+      { label: '🥁 Konvoyun arasına gir, korna çal',
+        outcomes: [
+          { chance: 0.65, result: 'Damadın amcası camdan uzandı, yakana 200 ₺ taktı. "Kurye de bizim çocuk." Bir dakika da dans ettin.', effects: { money: 200, rating: 0.1 } },
+          { chance: 0.35, result: 'Davulcu tokmağı çantaya denk getirdi. Pasta yamuldu. Müşteri fotoğrafı yükledi: "Bu ne?"', effects: { feeLost: true, rating: -0.3 } }
+        ] },
+      { label: '↩️ Arka sokaktan dolan',
+        result: 'Üç sokak dolandın, biri çıkmazdı. 12 dakika geç kaldın. Müşteri "neredesin" yazdı, "düğün" dedin, "ne düğünü" dedi.',
+        effects: { rating: -0.1 } }
+    ]
+  },
+
+  // ↓↓↓ Yeni olayları buraya ekle. Boş şablonlar dosyanın sonunda (EVENT_TEMPLATES). ↓↓↓
+];
+
+/* ---------------- DÜKKAN (KOZMETİK) ----------------
+   slot: helmet | jacket | gloves | scooter | bag   — avatar CSS değişkenine yazılır
+   nohelmet:true kaskı kaldırır (evet, satılıyor) */
+const SHOP = [
+  { id:'helmet_std', slot:'helmet', name:'Standart Kask', price:0, color:'#ff5a1f', desc:'Platformun verdiği. Turuncu. Herkesinki aynı.' },
+  { id:'helmet_matte', slot:'helmet', name:'Mat Siyah Kask', price:900, color:'#1f1f29', desc:'"Kurye değilim, motorcuyum" görünümü.' },
+  { id:'helmet_gold', slot:'helmet', name:'Altın Varak Kask', price:4500, color:'#e6b422', desc:'Güvenlik aynı. Özgüven farklı.' },
+  { id:'helmet_none', slot:'helmet', name:'Kasksız "Özgürlük"', price:1500, color:'#3a2516', nohelmet:true, desc:'Rüzgarı saçında hisset. Doktorun önermiyor.' },
+  { id:'helmet_cat', slot:'helmet', name:'Kedi Kulaklı Kask', price:2800, color:'#f28ab2', shape:'ears', desc:'Müşteriler "aaa" diyor. "Al bahşiş" demiyor.' },
+  { id:'helmet_pika', slot:'helmet', name:'Pikaçu Kask', price:5200, color:'#ffd21f', shape:'pika', desc:'Sarı, kulaklı, lisanssız. Avukatlar aramadı. Henüz.' },
+  { id:'helmet_viking', slot:'helmet', name:'Viking Kaskı', price:3900, color:'#8a7f72', shape:'horns', desc:'Boynuzlu. Tarihsel olarak yanlış, trafikte etkili.' },
+  { id:'helmet_retro', slot:'helmet', name:'Retro Yarım Kask', price:2100, color:'#f4f4f4', shape:'half', desc:'Çeneni korumuyor. Çenen zaten lafını esirgemiyor.' },
+  { id:'jacket_std', slot:'jacket', name:'Mavi Mont', price:0, color:'#2b6cff', desc:'Yağmur geçiriyor ama logosu büyük.' },
+  { id:'jacket_puffer', slot:'jacket', name:'Şişme Mont', price:2200, color:'#c9c9d6', desc:'Yastık gibi. Yastıktan pahalı, yastıktan az ısıtıyor.' },
+  { id:'jacket_leather', slot:'jacket', name:'Deri Ceket', price:6500, color:'#4a1f1f', desc:'Lahmacun teslim ederken "gizemli" görünmek için.' },
+  { id:'gloves_std', slot:'gloves', name:'Siyah Eldiven', price:0, color:'#222222', desc:'Delik. Ama siyah.' },
+  { id:'gloves_neon', slot:'gloves', name:'Neon Eldiven', price:700, color:'#48e08a', desc:'Gece görünür olursun. Siparişler görünmez kalır.' },
+  { id:'gloves_white', slot:'gloves', name:'Beyaz Garson Eldiveni', price:1800, color:'#f4f4f4', desc:'Lüks hissi. İlk teslimatta kirlenir.' },
+  { id:'scooter_std', slot:'scooter', name:'Kırmızı Motor', price:0, color:'#d33a2c', desc:'Mirasın. Taksitleri bitmiş.' },
+  { id:'scooter_mint', slot:'scooter', name:'Mint Yeşili Boya', price:3200, color:'#7fe0c3', desc:'Instagram için boyattın. Motor aynı.' },
+  { id:'scooter_chrome', slot:'scooter', name:'Krom Kaplama', price:9900, color:'#b8c4d6', desc:'Güneşte göz alır. Senin gözünü.' },
+  { id:'scooter_navy', slot:'scooter', name:'Lacivert Boya', price:2600, color:'#1f3a93', desc:'Sivil polis motoru gibi. Trafikte yol veriyorlar. Bir kere.' },
+  { id:'scooter_pink', slot:'scooter', name:'Pembe Boya', price:2600, color:'#ff6fb5', desc:'Çantayla takım oldu. Takım olmak bahşiş getirmiyor.' },
+  { id:'scooter_black', slot:'scooter', name:'Mat Siyah', price:4200, color:'#1a1a1f', desc:'Gece görünmüyor. Bu bir özellik, bir de risk.' },
+  { id:'scooter_white', slot:'scooter', name:'Beyaz "Vespa Değil"', price:3800, color:'#f1f1f1', desc:'Vespa değil. Herkes Vespa sanıyor. Düzeltmiyorsun.' },
+  { id:'scooter_olive', slot:'scooter', name:'Zeytin Yeşili', price:2600, color:'#6b8e23', desc:'Askeri görünüm. Askerlik yapmadın, motor yaptı.' },
+  { id:'scooter_gold', slot:'scooter', name:'Altın Kaplama', price:15000, color:'#e6b422', desc:'Hedefinin yarısı kadar. "Hedef" ne demekti?' },
+  { id:'bag_std', slot:'bag', name:'Termal Çanta', price:0, color:'#2a2a2a', desc:'İçini sıcak tutmuyor, adını tutuyor.' },
+  { id:'bag_pink', slot:'bag', name:'Pembe Çanta', price:1200, color:'#ff6fb5', desc:'Müşteriler fotoğraf çekiyor. Bahşiş vermiyor.' },
+  /* Yan gelir: oyun kapalıyken (çevrimdışı) saat başına kazandırır. slot:'side', idle:{perHour, cut}  cut: kesinti oranı (benzin, komisyon) */
+  { id:'side_cousin', slot:'side', name:'Kuzen Musti\'ye motor kirası', price:2500, color:'#8a6cff', idle:{perHour:70, cut:0.35}, desc:'Sen yokken motoru Musti sürer. Benzinini sen ödersin. Aile bu.' },
+  { id:'side_ads', slot:'side', name:'Motora reklam giydirmesi', price:6000, color:'#ffb347', idle:{perHour:140, cut:0.1}, desc:'Arkanda bir banka reklamı. Bankanın kuryesi değilsin ama öyle görünüyorsun.' }
+];
+
+/* ---------------- DURUM ---------------- */
+function defaultState(){
+  return {
+    goalId:null, goalPrice:0, money:CONFIG.startMoney, day:1, rating:CONFIG.startRating,
+    offered:0, accepted:0, complaints:0, streak:0, breakNext:false,
+    orderIdx:0, orderLog:[], offers:[], dayEarned:0, dayTips:0, dayFuel:0, dayExpense:0, lastSeen:Date.now(),
+    weather:'sunny', todayTags:[], todayMods:{feeMult:1,tipMult:1},
+    owned:['helmet_std','jacket_std','gloves_std','scooter_std','bag_std'],
+    equipped:{helmet:'helmet_std',jacket:'jacket_std',gloves:'gloves_std',scooter:'scooter_std',bag:'bag_std', side:null},
+    usedNews:[], recentEvents:[], current:null, phase:'start', dayClosed:false, log:[],
+    hayri:0, nebahat:0, dayDeliveries:[], dayReviews:[],
+    kmSince:0, ferhat:0, ferhatYield:0, serviceState:null, energy:100, name:'', usedNotes:[], usedReviews:[], gifts:[],
+    week:{ deliveries:0, earned:0, tips:0, fuel:0, complaints:0, breaks:0, skips:0, events:0, best:null }
+  };
+}
+let S = defaultState();
+let selectedGoal = null;
+
+function save(){ if(!S.goalId) return; /* başlangıç ekranı kaydın üstüne yazmasın */ S.lastSeen = Date.now(); try{ localStorage.setItem(CONFIG.saveKey, JSON.stringify(S)); }catch(e){} }
+function load(){ try{ const r = localStorage.getItem(CONFIG.saveKey); if(r){ const o = JSON.parse(r); if(o && o.goalId) return o; } }catch(e){} return null; }
+function clearSave(){ try{ localStorage.removeItem(CONFIG.saveKey); }catch(e){} }
+
+/* ---------------- SES (WebAudio, dosyasız) ----------------
+   Tüm sesler sentez: damga, bildirim, bozuk para, hata, motor. HUD'daki 🔊 ile açılır kapanır. */
+const Sfx = {
+  ctx:null, on:true, engineNodes:null,
+  load(){ try{ this.on = localStorage.getItem(CONFIG.soundKey) !== 'off'; }catch(e){} },
+  toggle(){ this.on = !this.on; try{ localStorage.setItem(CONFIG.soundKey, this.on?'on':'off'); }catch(e){} if(!this.on) this.engineStop(); else { this.init(); this.ding(); } return this.on; },
+  init(){ if(this.ctx) return this.ctx; const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return null; this.ctx = new AC(); return this.ctx; },
+  ready(){ if(!this.on) return null; const c = this.init(); if(!c) return null; if(c.state === 'suspended') c.resume(); return c; },
+  tone(freq, dur, type='sine', gain=0.08, when=0, slideTo=null){
+    const c = this.ready(); if(!c) return;
+    const o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(freq, c.currentTime + when);
+    if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, c.currentTime + when + dur);
+    g.gain.setValueAtTime(0.0001, c.currentTime + when); g.gain.exponentialRampToValueAtTime(gain, c.currentTime + when + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + when + dur);
+    o.connect(g).connect(c.destination); o.start(c.currentTime + when); o.stop(c.currentTime + when + dur + 0.05);
+  },
+  noise(dur, gain=0.2, when=0){
+    const c = this.ready(); if(!c) return;
+    const buf = c.createBuffer(1, c.sampleRate * dur, c.sampleRate); const d = buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i] = (Math.random()*2-1) * (1 - i/d.length);
+    const src = c.createBufferSource(); src.buffer = buf; const g = c.createGain(); g.gain.value = gain; const f = c.createBiquadFilter(); f.type='lowpass'; f.frequency.value = 900;
+    src.connect(f).connect(g).connect(c.destination); src.start(c.currentTime + when);
+  },
+  stamp(){ this.noise(0.12, 0.35); this.tone(90, 0.18, 'square', 0.12, 0, 45); },
+  ding(){ this.tone(880, 0.12, 'sine', 0.07); this.tone(1320, 0.18, 'sine', 0.06, 0.1); },
+  coin(){ this.tone(988, 0.08, 'square', 0.05); this.tone(1319, 0.16, 'square', 0.05, 0.08); },
+  buzz(){ this.tone(140, 0.28, 'sawtooth', 0.09, 0, 70); },
+  tada(){ [523,659,784,1047].forEach((f,i)=>this.tone(f, 0.18, 'triangle', 0.07, i*0.09)); },
+  click(){ this.tone(600, 0.04, 'square', 0.03); },
+  engineStart(){
+    const c = this.ready(); if(!c || this.engineNodes) return;
+    const o = c.createOscillator(), g = c.createGain(), lfo = c.createOscillator(), lg = c.createGain(), f = c.createBiquadFilter();
+    o.type = 'sawtooth'; o.frequency.value = 70; lfo.frequency.value = 11; lg.gain.value = 9; lfo.connect(lg).connect(o.frequency);
+    f.type = 'lowpass'; f.frequency.value = 500; g.gain.setValueAtTime(0.0001, c.currentTime); g.gain.exponentialRampToValueAtTime(0.045, c.currentTime + 0.4);
+    o.connect(f).connect(g).connect(c.destination); o.start(); lfo.start(); this.engineNodes = {o,g,lfo};
+  },
+  engineStop(){ const n = this.engineNodes; if(!n || !this.ctx) return; const t = this.ctx.currentTime; n.g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3); n.o.stop(t + 0.35); n.lfo.stop(t + 0.35); this.engineNodes = null; }
+};
+Sfx.load();
+document.addEventListener('pointerdown', () => { if(Sfx.on) Sfx.init(); }, { once:true });
+
+/* ---------------- YARDIMCILAR ---------------- */
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString('tr-TR') + ' ₺';
+const rnd = (a,b) => a + Math.random()*(b-a);
+const rint = (a,b) => Math.floor(rnd(a,b+1));
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+function weightedPick(list){ const tot = list.reduce((s,x)=>s+(x.weight||1),0); let r = Math.random()*tot; for(const x of list){ r -= (x.weight||1); if(r<=0) return x; } return list[list.length-1]; }
+const goal = () => GOALS.find(g=>g.id===S.goalId);
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+/* Hafıza olayı yardımcıları */
+function memChoices(correct, wrongs, okOut, badOut){
+  const list = [{ label: correct, ...okOut }, ...wrongs.slice(0,2).map(w => ({ label: w, ...badOut }))];
+  return shuffle(list);
+}
+function decoyNums(correct, min, max, step=1){
+  const out = new Set(); let tries = 0;
+  while(out.size < 2 && tries++ < 50){ const n = correct + (Math.random()<0.5?-1:1) * step * rint(1,3); if(n !== correct && n >= min && n <= max) out.add(n); }
+  while(out.size < 2){ out.add(min + step * out.size + (correct===min+step*out.size ? step*3 : 0)); }
+  return [...out];
+}
+function decoyNames(correct){
+  const out = new Set(); let tries = 0;
+  while(out.size < 2 && tries++ < 50){ const n = pick(FIRST_NAMES) + ' ' + pick(SURNAME_INITIALS); if(n !== correct) out.add(n); }
+  return [...out];
+}
+const acceptRate = () => S.offered ? S.accepted/S.offered : 1;
+const wx = () => WEATHER[S.weather] || WEATHER.sunny;
+const curHour = () => CONFIG.startHour + S.orderIdx * CONFIG.hoursPerRound;
+const isNight = () => curHour() >= CONFIG.nightFrom;
+const isWeekend = () => (S.day % 7 === 6 || S.day % 7 === 0);
+const hourStr = () => String(curHour() % 24).padStart(2,'0') + ':00';
+const wear = () => Math.min(100, Math.round(S.kmSince / CONFIG.serviceKm * 100));
+const energyCost = (o) => Math.round(CONFIG.energyBase + o.km * CONFIG.energyPerKm + (isNight() ? CONFIG.energyNight : 0) + (S.weather === 'rain' ? 4 : S.weather === 'snow' ? 9 : 0));
+// Düşük enerji kötü sonuç ihtimalini artırır: enerji 0 → kötü sonuçlara +0,35
+const badShift = () => Math.max(0, (40 - S.energy) / 40) * 0.35;
+const slug = (t) => (t||'kurye').toLowerCase().replace(/ı/g,'i').replace(/ş/g,'s').replace(/ğ/g,'g').replace(/ç/g,'c').replace(/ö/g,'o').replace(/ü/g,'u').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'') || 'kurye';
+const COURIER_NAMES = ['Deniz','Umut','Eren','Yiğit','Cem','Ozan','Berk','Selin','Ece','Mert','Ali','Efe'];
+const serviceQuote = () => CONFIG.serviceBase + wear() * CONFIG.serviceWearPrice;
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s => s.hidden = (s.id !== id));
+  $('hud').hidden = (id === 's-start');
+  document.querySelector('main').scrollTop = 0;
+  if(id !== 's-away') S.phase = id; // ara ekran, kaldığın yeri ezmesin
+  save();
+  if(S.goalId) renderHUD(); // saat ve hava simgesi ekrana göre değişir
+}
+
+function renderAvatar(el){
+  if(!el) return;
+  if(!el.children.length){
+    el.innerHTML = ['av-wheel b','av-wheel f','av-body','av-seat','av-front','av-bar','av-light','av-legs','av-foot','av-bag','av-jacket','av-zip','av-arm','av-glove','av-head','av-hair','av-helmet','av-visor']
+      .map(c=>`<div class="${c}"></div>`).join('');
+  }
+  let nohelmet = false, shape = '';
+  for(const slot in S.equipped){
+    const it = SHOP.find(x=>x.id===S.equipped[slot]);
+    if(!it || slot === 'side') continue;
+    el.style.setProperty('--'+slot, it.color);
+    if(it.nohelmet) nohelmet = true;
+    if(it.shape) shape = it.shape;
+  }
+  el.classList.toggle('nohelmet', nohelmet);
+  ['ears','pika','horns','half'].forEach(sh => el.classList.toggle('h-'+sh, shape === sh));
+}
+function renderAllAvatars(){ ['hud-avatar','start-avatar','ride-avatar','shop-avatar','win-avatar','fired-avatar'].forEach(id=>{ const h = $(id); if(h){ h.classList.add('avatar'); renderAvatar(h); } }); }
+
+function renderHUD(){
+  const inShift = S.goalId && !['s-news','s-dayend','s-start'].includes(S.phase) && S.orderIdx < CONFIG.ordersPerDay;
+  $('hud-day').textContent = 'GÜN ' + S.day + (inShift ? ' · ' + hourStr() : '') + ' ' + (inShift && isNight() ? '🌙' : wx().emoji);
+  $('hud-money').textContent = fmt(S.money);
+  $('hud-rating').textContent = S.rating.toFixed(1);
+  $('hud-accept').textContent = Math.round(acceptRate()*100) + '%';
+  const w = wear(); $('hud-wear').textContent = w + '%'; $('hud-wear').style.color = w >= 80 ? 'var(--bad)' : (w >= 50 ? 'var(--accent2)' : 'var(--fg)');
+  $('btn-sound').textContent = Sfx.on ? '🔊' : '🔇';
+  const en = clamp(S.energy, 0, CONFIG.energyMax);
+  $('hud-energy-txt').textContent = en;
+  $('hud-energy').style.width = en + '%';
+  $('hud-energy').style.background = en < 30 ? 'var(--bad)' : (en < 60 ? 'var(--accent2)' : 'var(--good)');
+  $('hud-tariff').textContent = (S.goalId && !['s-news','s-dayend','s-start'].includes(S.phase) && S.orderIdx < CONFIG.ordersPerDay && isNight()) ? `🌙 Gece tarifesi ×${CONFIG.nightFeeMult}` : (isWeekend() ? '🎉 Hafta sonu' : '');
+  const g = goal();
+  if(g){
+    $('hud-goalname').textContent = g.emoji + ' ' + g.name;
+    $('hud-goalprice').textContent = fmt(S.goalPrice);
+    $('hud-bar').style.width = clamp(S.money / S.goalPrice * 100, 0, 100) + '%';
+  }
+  renderAvatar($('hud-avatar'));
+}
+function flashPrice(up){ const el = $('hud-goalprice'); el.classList.remove('flash-up','flash-down'); void el.offsetWidth; el.classList.add(up?'flash-up':'flash-down'); }
+
+/* ---------------- BAŞLANGIÇ ---------------- */
+function renderGoals(){
+  $('goals').innerHTML = GOALS.map(g => `
+    <button class="goal ${selectedGoal===g.id?'sel':''}" data-id="${g.id}">
+      <div class="emoji">${g.emoji}</div>
+      <div><div>${g.name}</div><div class="desc">${g.desc}</div></div>
+      <div class="price">${fmt(g.price)}</div>
+    </button>`).join('');
+  $('goals').querySelectorAll('.goal').forEach(b => b.onclick = () => { selectedGoal = b.dataset.id; renderGoals(); $('btn-start').disabled = false; });
+}
+function startGame(){
+  const keep = { owned:S.owned, equipped:S.equipped };
+  const typed = ($('name-input').value || '').trim();
+  S = Object.assign(defaultState(), keep);
+  S.name = typed || pick(COURIER_NAMES);
+  S.goalId = selectedGoal; S.goalPrice = goal().price;
+  renderAllAvatars(); renderHUD(); startDay();
+}
+
+/* ---------------- GÜN AKIŞI ---------------- */
+function startDay(){
+  S.orderIdx = 0; S.orderLog = []; S.dayEarned = 0; S.dayTips = 0; S.dayFuel = 0; S.dayExpense = CONFIG.dailyExpense; S.dayDeliveries = []; S.dayReviews = [];
+  S.todayMods = {feeMult:1, tipMult:1}; S.todayTags = []; S.weather = null; S.streak = 0; S.breakNext = false; S.energy = CONFIG.energyMax; S.usedNotes = [];
+  // 1 haber (bazen 2) seç; kategoriye uygun ya da genel. Aynı haber tekrar etmesin.
+  const g = goal();
+  let pool = NEWS.filter(n => (n.cat==='all' || n.cat===g.cat) && !S.usedNews.includes(n.id));
+  if(pool.length < 2){ S.usedNews = []; pool = NEWS.filter(n => n.cat==='all' || n.cat===g.cat); }
+  const count = Math.random() < 0.3 ? 2 : 1;
+  const chosen = [];
+  for(let i=0;i<count && pool.length;i++){ const n = pick(pool); chosen.push(n); pool = pool.filter(x=>x!==n); S.usedNews.push(n.id); }
+  $('news-day').textContent = `GÜN ${S.day} · SABAH BÜLTENİ`;
+  const cards = chosen.map(n => {
+    const e = n.effect || {}; const tags = [];
+    let priceHtml = '';
+    if(e.priceMult){
+      const old = S.goalPrice; S.goalPrice = Math.round(old * e.priceMult / 10) * 10;
+      const up = e.priceMult > 1;
+      priceHtml = `<div class="priceline"><span class="old">${fmt(old)}</span><span>→</span><span class="new" style="color:${up?'var(--bad)':'var(--good)'}">${fmt(S.goalPrice)}</span><span class="tag ${up?'up':'down'}">${up?'▲':'▼'} ${Math.round(Math.abs(e.priceMult-1)*100)}%</span></div>`;
+      setTimeout(()=>flashPrice(up), 50);
+    }
+    if(e.feeMult){ S.todayMods.feeMult *= e.feeMult; tags.push(`<span class="tag info">Bugün ücretler ×${e.feeMult}</span>`); }
+    if(e.tipMult){ S.todayMods.tipMult *= e.tipMult; tags.push(`<span class="tag info">Bugün bahşiş ×${e.tipMult}</span>`); }
+    if(e.expense){ S.dayExpense += e.expense; tags.push(`<span class="tag up">Bugün ek gider +${fmt(e.expense)}</span>`); }
+    if(e.weather){ S.weather = e.weather; }
+    if(e.tags){ S.todayTags.push(...e.tags); }
+    if(!Object.keys(e).length) tags.push(`<span class="tag">Etkisi yok. Şimdilik.</span>`);
+    return `<div class="card news"><div class="kicker">${n.kicker}</div><h3>${n.headline}</h3><p class="muted">${n.body}</p>${priceHtml}<div class="delta">${tags.join('')}</div></div>`;
+  });
+  if(isWeekend()){ S.todayTags.push('weekend'); S.todayMods.feeMult *= CONFIG.weekendFeeMult; cards.push(`<div class="card wxcard"><div class="ico">🎉</div><div><h3>Hafta sonu</h3><p class="muted small">Herkes evde, herkes aç, kimse mutfağa girmiyor. Ücretler yüksek, kapıyı açanlar pijamalı.</p><div class="delta" style="margin-top:6px"><span class="tag info">Ücretler ×${CONFIG.weekendFeeMult}</span></div></div></div>`); }
+  // Hava: haber belirlemediyse rastgele
+  if(!S.weather){ S.weather = weightedPick(Object.keys(WEATHER).map(k=>({k, weight:WEATHER[k].weight}))).k; }
+  const w = wx(); S.todayMods.feeMult *= w.feeMult;
+  cards.push(`<div class="card wxcard"><div class="ico">${w.emoji}</div><div><h3>Bugün hava: ${w.name}</h3><p class="muted small">${w.blurb}</p><div class="delta" style="margin-top:6px">${w.feeMult!==1?`<span class="tag info">Ücretler ×${w.feeMult}</span>`:''}${w.risk?`<span class="tag up">Olay riski ↑</span>`:''}</div></div></div>`);
+  $('news-list').innerHTML = cards.join('');
+  renderHUD(); show('s-news');
+}
+
+function genOrder(){
+  const r = pick(RESTAURANTS);
+  const d = DISTRICTS.find(x => x.name === pick(r.areas)) || pick(DISTRICTS);
+  const km = rint(1, CONFIG.maxDistanceKm);
+  // Ürünler: 1-4 kalem, hepsi aynı restoranın menüsünden. Tek kalem sadece "solo" ürünlerde.
+  const lines = []; let tries = 0;
+  const n = Math.min(r.menu.length, Math.random() < 0.2 ? 1 : rint(2,4));
+  while(lines.length < n && tries++ < 40){
+    const c = pick(r.menu);
+    if(n === 1 && !c[3]) continue;
+    if(lines.some(l=>l.name===c[1])) continue;
+    lines.push({ emoji:c[0], name:c[1], price:c[2], qty: c[3] ? 1 : rint(1,3) });
+  }
+  const total = lines.reduce((t,l)=>t+l.price*l.qty, 0);
+  const bulk = lines.reduce((t,l)=>t+l.qty, 0);
+  const fee = Math.round((CONFIG.baseFee + km*CONFIG.feePerKm + bulk*CONFIG.bulkFee) * (0.6 + 0.4*acceptRate()) * S.todayMods.feeMult * (isNight()?CONFIG.nightFeeMult:1) * rnd(0.9,1.15));
+  const floor = rint(1,7), perFloor = rint(2,4), apt = (floor-1)*perFloor + rint(1,perFloor);
+  const base = { floor, apt };
+  const note = pickNote(base);
+  return {
+    rest:r.name, restTag:r.tag, lines, total, bulk,
+    emoji: lines[0].emoji,
+    customer: pick(FIRST_NAMES) + ' ' + pick(SURNAME_INITIALS),
+    hood: pick(d.hoods), street: pick(d.streets), no: rint(2,48), building: pick(BUILDINGS), floor, apt,
+    payment: Math.random() < 0.25 ? 'nakit' : 'online',
+    district:d.name, districtDat:d.dat, districtTip:d.tip, blurb:d.blurb, km, fee, fuel: km*CONFIG.fuelPerKm,
+    eta: 8 + km*3 + rint(0,6), note: note.text, noteKey: note.key, noteValue: note.value
+  };
+}
+function ticketHTML(o, idx){
+  return `<div class="ticket pick" data-i="${idx}">
+    <div class="rest">${o.rest}</div>
+    <div class="note" style="margin:0 0 6px">${o.restTag}</div>
+    <div class="items">${o.lines.map(l=>`<span><span>${l.emoji} ${l.qty}× ${l.name}</span><span>${fmt(l.price*l.qty)}</span></span>`).join('')}</div>
+    <div class="addr"><b>${o.customer}</b> · ${o.hood}, ${o.street} No:${o.no} ${o.building}, Kat ${o.floor}, Daire ${o.apt}<br>${o.district} · ${o.km} km · ~${o.eta} dk</div>
+    ${o.note ? `<div class="note">“${o.note}”</div>` : ''}
+    <div class="meta"><div class="l">Sipariş tutarı ${fmt(o.total)}<br><span class="pay">${o.payment==='nakit'?'KAPIDA NAKİT':'ONLINE ÖDENDİ'}</span><br>Benzin ≈ −${fmt(o.fuel)} · Enerji ≈ −${energyCost(o)}</div><div style="text-align:right"><div class="fee">${fmt(o.fee)}</div>${isNight()?'<div class="small" style="color:#8a1c1c;font-weight:700">🌙 gece ×'+CONFIG.nightFeeMult+'</div>':''}</div></div>
+    <button class="take" data-i="${idx}">Bu siparişi al</button>
+  </div>`;
+}
+function renderDots(){
+  $('order-dots').innerHTML = Array.from({length:CONFIG.ordersPerDay},(_,i)=>`<i class="${S.orderLog[i]||''} ${i===S.orderIdx?'cur':''}"></i>`).join('');
+}
+function nextOrder(){
+  if(S.orderIdx >= CONFIG.ordersPerDay){ return endDay(); }
+  if(S.breakNext){ return takeBreak(); }
+  const n = rint(CONFIG.offersPerRound[0], CONFIG.offersPerRound[1]);
+  S.offers = Array.from({length:n}, genOrder);
+  S.current = null;
+  $('order-no').textContent = `Tur ${S.orderIdx+1}/${CONFIG.ordersPerDay} · ${hourStr()}${isNight()?' 🌙':''}`;
+  renderDots();
+  $('offers').innerHTML = S.offers.map(ticketHTML).join('');
+  $('offers').querySelectorAll('.take').forEach(b => b.onclick = (ev) => { ev.stopPropagation(); choose(+b.dataset.i); });
+  const ar = acceptRate();
+  let hint;
+  if(ar < 0.7) hint = 'Çok tur geçtin. Algoritma sana artık ucuz siparişleri gösteriyor.';
+  else if(S.rating < 3.5) hint = 'Puanın düşük. Müşteriler bahşişte cimrileşti.';
+  else if(S.streak >= CONFIG.streakBonusAt-1) hint = `${S.streak} sipariş üst üste. Bir tane daha: ${fmt(CONFIG.streakBonus)} bonus. Mola dersen sıfırlanır. Uygulama bunu "motivasyon" sayıyor.`;
+  else if(isNight() && curHour() === CONFIG.nightFrom) hint = `Gece tarifesi başladı: ücretler ×${CONFIG.nightFeeMult}. Karanlık, yorgunluk ve rakılı müşteriler fiyata dahil.`;
+  else if(S.energy < CONFIG.energyLow) hint = `Enerjin ${S.energy}. Bu halde her şey ters gidebilir. Gidiyor da.`;
+  else if(S.weather !== 'sunny') hint = `Hava ${wx().name.toLowerCase()}. Uzun yol, uzun risk. Bunu uygulama söylemez, biz söyledik.`;
+  else hint = pick(PLATFORM_MSGS);
+  $('order-hint').innerHTML = `<b>🔔 KapitalEats</b><span>${hint}</span>`;
+  $('btn-skip').disabled = false;
+  Sfx.ding();
+  renderHUD(); show('s-order');
+}
+function choose(i){
+  const o = S.offers[i]; if(!o) return;
+  S.current = { order:o, tip:0, extraMoney:0, feeLost:false, ratingDelta:0 };
+  $('btn-skip').disabled = true;
+  document.querySelectorAll('#offers .ticket').forEach((t,j) => {
+    if(j === i){ const st = document.createElement('div'); st.className='stamp ok'; st.innerHTML='<span>KABUL</span>'; t.appendChild(st); }
+    else t.classList.add('dim');
+    t.querySelector('.take').disabled = true;
+  });
+  S.offered++; S.accepted++; S.streak++;
+  S.orderLog[S.orderIdx] = 'ok';
+  Sfx.stamp();
+  setTimeout(ride, CONFIG.stampMs);
+}
+function skipRound(){
+  S.offered++; S.streak = 0; S.week.skips++;
+  S.orderLog[S.orderIdx] = 'no';
+  document.querySelectorAll('#offers .ticket').forEach(t => { t.classList.add('dim'); });
+  $('btn-skip').disabled = true;
+  setTimeout(()=>{ S.orderIdx++; if(!checkFired()) nextOrder(); }, 400);
+}
+function takeBreak(){
+  S.breakNext = false; S.streak = 0; S.week.breaks++; S.energy = clamp(S.energy + CONFIG.breakEnergy, 0, CONFIG.energyMax);
+  S.orderLog[S.orderIdx] = 'break';
+  S.money -= CONFIG.breakCost; S.dayExpense += CONFIG.breakCost;
+  $('res-title').textContent = '☕ MOLA';
+  $('res-summary').innerHTML = `<span>Çay + simit</span><span style="color:var(--bad)">−${fmt(CONFIG.breakCost)}</span><span>⚡ Enerji</span><span style="color:var(--good)">+${CONFIG.breakEnergy}</span><span class="tot">Kazanç</span><span class="tot">0 ₺</span>`;
+  $('res-note').textContent = '11 dakika boyunca kimse aramadı. Rüya gibiydi. Sonra uygulama titreşti.';
+  S.orderIdx++;
+  $('btn-res-next').textContent = S.orderIdx >= CONFIG.ordersPerDay ? 'Günü Bitir' : 'Sonraki Sipariş';
+  renderHUD(); show('s-result');
+}
+
+function ride(){
+  const o = S.current.order;
+  $('ride-text').innerHTML = `<span class="dots-anim">${o.districtDat} gidiliyor</span><br><span class="muted">${o.km} km · ${o.hood} · ${isNight()?'🌙':wx().emoji}</span><span style="font-family:var(--body);font-size:14px;display:block;margin-top:10px;color:var(--fg)">${o.blurb}</span>`;
+  const sc = document.querySelector('.scene'); sc.classList.toggle('rain', S.weather==='rain'); sc.classList.toggle('snow', S.weather==='snow');
+  const h = curHour(); sc.classList.toggle('night', h >= CONFIG.nightFrom); sc.classList.toggle('dusk', h >= 17 && h < CONFIG.nightFrom); sc.classList.toggle('day', h < 17);
+  renderAvatar($('ride-avatar'));
+  show('s-ride'); Sfx.engineStart();
+  setTimeout(()=>{
+    Sfx.engineStop();
+    const ev = pickEvent();
+    if(ev) showEvent(ev); else finishDelivery();
+  }, CONFIG.rideMs);
+}
+
+/* ---------------- OLAYLAR ---------------- */
+function eligible(e){
+  if(e.minDay && S.day < e.minDay) return false;
+  if(e.weather && !e.weather.includes(S.weather)) return false;
+  const tagsNow = S.todayTags.concat(isNight() ? ['night'] : ['day']);
+  if(e.tags && !e.tags.some(t => tagsNow.includes(t))) return false;
+  if(e.km && (S.current.order.km < e.km[0] || S.current.order.km > e.km[1])) return false;
+  if(e.condition && !e.condition(S, S.current.order)) return false;
+  return true;
+}
+function pickEvent(){
+  const pool = EVENTS.filter(eligible);
+  const forced = pool.filter(e => e.priority);
+  if(forced.length) return weightedPick(forced);
+  // Hava riski mesafeyle büyür: 9 km karda olay neredeyse kesin.
+  const risk = CONFIG.eventChance + wx().risk * 2 * (S.current.order.km / CONFIG.maxDistanceKm);
+  if(Math.random() > risk) return null;
+  let fresh = pool.filter(e => !S.recentEvents.includes(e.id));
+  if(!fresh.length) fresh = pool;
+  return fresh.length ? weightedPick(fresh) : null;
+}
+function showEvent(ev){
+  S.recentEvents.unshift(ev.id); S.recentEvents = S.recentEvents.slice(0, CONFIG.recentEventMemory);
+  S.current.eventId = ev.id;
+  // Dinamik olaylar siparişin detaylarından (ad, daire, tutar...) metin ve seçenek üretir.
+  const built = ev.build ? ev.build(S.current.order, S) : { text: ev.text, choices: ev.choices };
+  const choices = built.choices;
+  $('ev-title').textContent = ev.title;
+  $('ev-stage').textContent = [ev.stage, wx().emoji + ' ' + wx().name, S.current.order.district].filter(Boolean).join(' · ');
+  $('ev-text').textContent = built.text;
+  $('ev-result').hidden = true;
+  $('ev-choices').hidden = false;
+  $('ev-choices').innerHTML = choices.map((c,i)=>`<button class="btn" data-i="${i}">${c.label}</button>`).join('');
+  $('ev-choices').querySelectorAll('button').forEach(b => b.onclick = () => resolveChoice(ev, choices[+b.dataset.i]));
+  show('s-event');
+}
+function resolveChoice(ev, choice){
+  let out = choice;
+  if(choice.outcomes){
+    // Düşük enerji: kötü sonuçların (negatif etkili) şansı artar.
+    const isBadOut = (oc) => { const e = oc.effects||{}; return (e.money<0)||(e.rating<0)||e.feeLost||e.complaint; };
+    const shift = badShift();
+    const weights = choice.outcomes.map(oc => Math.max(0.01, oc.chance + (isBadOut(oc) ? shift : -shift)));
+    const tot = weights.reduce((x,y)=>x+y,0); let r = Math.random()*tot; out = choice.outcomes[choice.outcomes.length-1];
+    for(let i=0;i<choice.outcomes.length;i++){ r -= weights[i]; if(r <= 0){ out = choice.outcomes[i]; break; } }
+  }
+  const d = applyEffects(out.effects || {});
+  $('ev-choices').hidden = true;
+  $('ev-result-text').textContent = out.result || '';
+  const v = innerVoice(out.effects, ev.id);
+  if(v && v.kind === 'fail') Sfx.buzz(); else if(v) Sfx.coin();
+  $('ev-voice').hidden = !v;
+  if(v){ $('ev-voice').className = 'voice ' + v.kind; $('ev-voice').innerHTML = `<b>[${v.q[0]} · ${v.kind==='fail'?'Başarısız':'Başarılı'}]</b> ${v.q[1]}`; }
+  $('ev-delta').innerHTML = d.map(x => `<span class="${x.v>=0?'plus':'minus'}">${x.t}</span>`).join('');
+  $('ev-result').hidden = false;
+  $('btn-ev-next').textContent = S.current.skip ? 'Devam' : 'Teslim Et';
+  S.log.unshift(`G${S.day} · ${ev.title}: ${choice.label.replace(/^\S+\s/,'')}`);
+  renderHUD();
+}
+function applyEffects(e){
+  const c = S.current, o = c.order, d = [];
+  if(e.tip){ const t = Math.round(e.tip * S.todayMods.tipMult); c.tip += t; d.push({t:`+${fmt(t)} bahşiş`, v:1}); }
+  if(e.tipPct){ const t = Math.round(o.fee * e.tipPct * S.todayMods.tipMult); c.tip += t; d.push({t:`+${fmt(t)} bahşiş`, v:1}); }
+  if(e.money){ c.extraMoney += e.money; d.push({t:`${e.money>0?'+':''}${fmt(e.money)}`, v:e.money}); }
+  if(e.feeLost){ c.feeLost = true; d.push({t:`Ücret ödenmedi (−${fmt(o.fee)})`, v:-1}); }
+  if(e.rating){ c.ratingDelta += e.rating; d.push({t:`${e.rating>0?'+':''}${e.rating.toFixed(1)} ⭐`, v:e.rating}); }
+  if(e.complaint){ c.ratingDelta -= 0.3; S.offered += 1; S.complaints += 1; S.week.complaints += 1; d.push({t:`Müşteri şikayeti (${S.complaints}/${CONFIG.maxComplaints})`, v:-1}); }
+  if(e.goalPrice){ const old = S.goalPrice; S.goalPrice = Math.round(old*e.goalPrice/10)*10; d.push({t:`Hedef fiyatı ${fmt(old)} → ${fmt(S.goalPrice)}`, v: e.goalPrice>1?-1:1}); flashPrice(e.goalPrice>1); }
+  if(e.breakNext){ S.breakNext = true; d.push({t:'☕ Sonraki sipariş: mola', v:0}); }
+  if(e.expense){ S.dayExpense = Math.max(0, S.dayExpense + e.expense); d.push({t:`Günlük gider ${e.expense<0?'−':'+'}${fmt(Math.abs(e.expense))}`, v:-e.expense}); }
+  if(e.hayri){ S.hayri = (S.hayri||0) + e.hayri; }
+  if(e.ferhat){ S.ferhat = (S.ferhat||0) + 1; if(e.ferhat === 'yield') S.ferhatYield = (S.ferhatYield||0) + 1; }
+  if(e.wearSet !== undefined){ S.kmSince = Math.round(CONFIG.serviceKm * e.wearSet / 100); d.push({t:`🔧 Aşınma %${e.wearSet}`, v:1}); }
+  if(e.wearAdd){ S.kmSince += Math.round(CONFIG.serviceKm * e.wearAdd / 100); d.push({t:`🔧 Aşınma +%${e.wearAdd}`, v:-1}); }
+  if(e.nebahat !== undefined){ S.nebahat = (S.nebahat||0) + e.nebahat; }
+  if(e.complaint) c.bad = true;
+  if(e.feeLost) c.bad = true;
+  if(e.streakReset){ S.streak = 0; }
+  if(e.energy){ S.energy = clamp(S.energy + e.energy, 0, CONFIG.energyMax); if(e.energy > 0) c.energyGain = (c.energyGain||0) + e.energy; d.push({t:`⚡ ${e.energy>0?'+':''}${e.energy}`, v:e.energy}); }
+  if(e.giftItem){ const pool = SHOP.filter(x => !S.owned.includes(x.id) && x.price > 0 && x.price <= 2800 && x.slot !== 'side'); if(pool.length){ const g = pick(pool); S.owned.push(g.id); S.equipped[g.slot] = g.id; S.gifts.push(g.id); renderAllAvatars(); d.push({t:`🎁 ${g.name}`, v:1}); } else { c.extraMoney += 100; d.push({t:'+100 ₺ (Hayri Abi\'nin cebinden)', v:1}); } }
+  if(e.skipDelivery){ c.skip = true; }
+  return d;
+}
+
+/* ---------------- TESLİMAT SONUCU ---------------- */
+function finishDelivery(){
+  const c = S.current, o = c.order;
+  // Olay dışı doğal bahşiş: puan yüksekse daha çok
+  if(!c.skip && o.noteKey !== 'tiplater' && Math.random() < 0.6 * (S.rating/5) * (o.districtTip||1)){ c.tip += Math.round(o.fee * rnd(0.08,0.3) * S.todayMods.tipMult * (o.districtTip||1)); }
+  // Platform "performans bonusu": üst üste N teslimat. Mola vermeyene ödül; yorgunluk olayıyla tam ters düşsün diye.
+  if(S.streak === CONFIG.streakBonusAt){ c.extraMoney += CONFIG.streakBonus; c.bonus = true; }
+  const fee = c.feeLost ? 0 : o.fee;
+  const total = fee + c.tip + c.extraMoney - o.fuel;
+  S.money += total; S.dayEarned += fee + c.extraMoney; S.dayTips += c.tip; S.dayFuel += o.fuel;
+  S.dayDeliveries.push({ customer:o.customer, rest:o.rest, item:o.lines.slice().sort((x,y)=>y.price-x.price)[0].name, delta:c.ratingDelta, tip:c.tip, bad:!!c.bad, eventId:c.eventId||null, night:isNight(), floor:o.floor, noteKey:o.noteKey||null });
+  S.kmSince += o.km;
+  c.energyCost = energyCost(o); S.energy = clamp(S.energy - c.energyCost, 0, CONFIG.energyMax);
+  const W = S.week; W.deliveries++; W.earned += fee + c.extraMoney; W.tips += c.tip; W.fuel += o.fuel; if(c.eventId){ W.events++; if(!W.best || total > W.best.total) W.best = { total, title: (EVENTS.find(e=>e.id===c.eventId)||{}).title || '', customer:o.customer }; }
+  S.rating = clamp(S.rating + c.ratingDelta, 1, 5);
+  $('res-title').textContent = 'Teslim Edildi';
+  $('res-summary').innerHTML = `
+    <span>Sipariş ücreti</span><span>${c.feeLost?'<s>'+fmt(o.fee)+'</s> 0 ₺':fmt(fee)}</span>
+    <span>Bahşiş</span><span>${fmt(c.tip)}</span>
+    ${c.extraMoney?`<span>Diğer</span><span>${c.extraMoney>0?'+':''}${fmt(c.extraMoney)}</span>`:''}
+    <span>Benzin (${o.km} km)</span><span style="color:var(--bad)">−${fmt(o.fuel)}</span>
+    <span>⚡ Enerji</span><span style="color:var(--bad)">−${c.energyCost}${c.energyGain?` <span style="color:var(--good)">+${c.energyGain}</span>`:''}</span>
+    <span class="tot">Toplam</span><span class="tot" style="color:${total>=0?'var(--good)':'var(--bad)'}">${total>=0?'+':''}${fmt(total)}</span>`;
+  $('res-note').textContent = c.bonus ? `🏅 Platform bonusu +${fmt(CONFIG.streakBonus)}: ${CONFIG.streakBonusAt} teslimat üst üste, sıfır mola. "Verimlilik şampiyonu." Sırtın ağrıyor.` : c.ratingDelta ? `Müşteri puanı ${c.ratingDelta>0?'yükseldi':'düştü'}: ${S.rating.toFixed(1)} ⭐` : (c.tip ? 'Müşteri bahşiş bıraktı. Nadir bir an, kaydet.' : 'Bahşiş yok. "Teşekkürler" bile yok.');
+  S.orderIdx++;
+  $('btn-res-next').textContent = S.orderIdx >= CONFIG.ordersPerDay && !S.breakNext ? 'Günü Bitir' : 'Sonraki Sipariş';
+  renderHUD();
+  if(checkWin() || checkFired()) return;
+  if(total > 0) Sfx.coin(); else Sfx.buzz();
+  show('s-result');
+}
+
+function checkWin(){
+  if(S.money >= S.goalPrice){ showWin(); return true; }
+  return false;
+}
+function checkFired(){
+  let reason = null;
+  if(S.rating <= CONFIG.fireRating) reason = `Puanın artık ${S.rating.toFixed(1).replace('.',',')}. Platform "müşteri deneyimi standartlarımız" dedi. Standartları kimse görmedi.`;
+  else if(S.complaints >= CONFIG.maxComplaints) reason = `${S.complaints} şikayet. Dördüncüsünde sistem otomatik kapattı. İnsan değil, "destek botu" bildirdi.`;
+  else if(S.offered >= 12 && acceptRate() < 0.4) reason = `Turların %${100-Math.round(acceptRate()*100)}'ini geçtin. Algoritma seni önce unuttu, sonra sildi.`;
+  if(!reason) return false;
+  showFired(reason); return true;
+}
+
+/* ---------------- GÜN SONU & DÜKKAN ---------------- */
+function endDay(){
+  S.money -= S.dayExpense;
+  S.dayClosed = true;
+  S.dayReviews = makeReviews(); S.serviceState = null;
+  renderDaySummary(); renderService(); renderShop(); renderHUD(); show('s-dayend');
+}
+function renderDaySummary(){
+  $('de-title').textContent = `GÜN ${S.day} BİTTİ`;
+  const acc = S.orderLog.filter(x=>x==='ok').length;
+  $('de-summary').innerHTML = `
+    <span>Teslimat</span><span>${acc}/${CONFIG.ordersPerDay}</span>
+    <span>Kazanılan ücret</span><span>+${fmt(S.dayEarned)}</span>
+    <span>Bahşiş</span><span>+${fmt(S.dayTips)}</span>
+    <span>Benzin</span><span style="color:var(--bad)">−${fmt(S.dayFuel)}</span>
+    <span>Günlük gider (simit, çay, motor)</span><span style="color:var(--bad)">−${fmt(S.dayExpense)}</span>
+    <span class="tot">Kasa</span><span class="tot">${fmt(S.money)}</span>
+    <span class="muted small">Hedefe kalan</span><span class="muted small">${fmt(Math.max(0,S.goalPrice - S.money))}</span>`;
+  const rv = S.dayReviews || [];
+  $('de-reviews').innerHTML = rv.length ? `<h2>Bugünkü Yorumlar</h2>` + rv.map(r => `<div class="review"><div class="who">${r.name} <span class="muted">· ${pick(['az önce','1 saat önce','2 saat önce','bugün'])}</span></div><div>${r.text}</div></div>`).join('')
+    : `<h2>Bugünkü Yorumlar</h2><div class="review muted">Kimse yorum yazmadı. Bu da bir yorum.</div>`;
+}
+/* Usta Cemil: bakım + pazarlık. serviceState: null | 'quoted' | 'haggled' | 'done' */
+function renderService(){
+  const w = wear(), q = serviceQuote(), st = S.serviceState || {};
+  let html = `<div class="svc-head"><div class="ico">🔧</div><div><b>Motor aşınması %${w}</b><div class="small muted">${w < 30 ? 'Motor iyi. Cemil Usta "boşuna gelme" dedi, ama baktı yine de.' : w < 60 ? 'Sarı bölge. Cemil Usta kulağını motora dayadı, "hmm" dedi. "Hmm" pahalıdır.' : w < 90 ? 'Kırmızı bölge. Cemil Usta sigarasını söndürdü. Bu ciddi demek.' : 'Cemil Usta motora baktı, sana baktı, "bununla mı geldin?" dedi.'}</div></div></div>
+    <div class="bar"><i style="width:${w}%;background:${w>=80?'var(--bad)':w>=50?'var(--accent2)':'var(--good)'}"></i></div>`;
+  if(st.done){
+    html += `<p class="small">${st.text}</p>`;
+  } else if(w < 15){
+    html += `<p class="small muted">Bakım gerekmiyor. Cemil Usta çay ikram etti, parasını almadı. Çayın.</p>`;
+  } else if(!st.quoted){
+    html += `<p class="small">Cemil Usta: "Bu ${fmt(q)} tutar kardeşim. Parça ayrı." Parça hep ayrıdır.</p>
+      <div class="actions"><button class="btn ghost" id="btn-haggle">🗣️ Pazarlık yap</button><button class="btn primary" id="btn-service" ${S.money<q?'disabled':''}>🔧 Öde (${fmt(q)})</button></div>`;
+  } else {
+    html += `<p class="small">${st.text}</p>
+      <div class="actions one"><button class="btn primary" id="btn-service" ${S.money<st.price?'disabled':''}>🔧 Öde (${fmt(st.price)})</button></div>`;
+  }
+  $('service').innerHTML = html;
+  const bh = $('btn-haggle'), bs = $('btn-service');
+  if(bh) bh.onclick = () => {
+    Sfx.click();
+    const r = Math.random();
+    if(r < 0.45) S.serviceState = { quoted:true, price: Math.round(q*0.8/10)*10, text: `"Tamam, hemşehrim olduğun için ${fmt(Math.round(q*0.8/10)*10)}." Hemşehrisi değilsin. O da biliyor.` };
+    else if(r < 0.8) S.serviceState = { quoted:true, price: q, text: `Cemil Usta güldü. "Pazarlık mı? Fiyat fiyattır." ${fmt(q)}. Gülmesi bedava, bir o.` };
+    else S.serviceState = { quoted:true, price: Math.round(q*1.1/10)*10, text: `Cemil Usta sinirlendi. "Pazarlıkla gelene parça da ayrı, işçilik de ayrı." ${fmt(Math.round(q*1.1/10)*10)}. Ağzını açmasaydın.` };
+    renderService();
+  };
+  if(bs) bs.onclick = () => {
+    const price = (S.serviceState && S.serviceState.price) || q;
+    if(S.money < price) return;
+    S.money -= price; S.kmSince = 0; Sfx.coin();
+    S.serviceState = { done:true, text: `Bakım yapıldı, ${fmt(price)} gitti. Motor yeni gibi. Yeni değil, "gibi". Cemil Usta "bir dahakine erken gel" dedi. Gelmeyeceksin.` };
+    S.log.unshift(`G${S.day} · Motor bakımı: ${fmt(price)}`);
+    renderService(); renderShop(); renderHUD(); renderDaySummary();
+  };
+}
+function renderShop(){
+  renderAvatar($('shop-avatar'));
+  $('shop').innerHTML = SHOP.map(i => {
+    const owned = S.owned.includes(i.id), eq = S.equipped[i.slot]===i.id;
+    const can = owned || S.money >= i.price;
+    return `<button class="item ${owned?'owned':''} ${eq?'eq':''}" data-id="${i.id}" ${can?'':'disabled'}>
+      <div class="sw" style="background:${i.color}"></div>
+      <div class="nm">${i.name}</div>
+      <div class="pr">${eq?(i.slot==='side'?'AKTİF':'GİYİLİYOR'):owned?(i.slot==='side'?'Sahipsin · aktif et':'Sahipsin · giy'):fmt(i.price)}</div>
+      <div class="ds">${i.desc}</div></button>`;
+  }).join('');
+  $('shop').querySelectorAll('.item').forEach(b => b.onclick = () => buy(b.dataset.id));
+}
+function buy(id){
+  const it = SHOP.find(x=>x.id===id); if(!it) return;
+  if(!S.owned.includes(id)){ if(S.money < it.price) return; S.money -= it.price; S.owned.push(id); S.log.unshift(`G${S.day} · Satın alındı: ${it.name}`); }
+  S.equipped[it.slot] = id;
+  renderAllAvatars(); renderHUD(); renderShop(); renderDaySummary();
+}
+function sleep(){
+  if(S.day % 7 === 0){ showWeek(); return; }
+  S.day++; S.dayClosed = false; startDay();
+}
+/* Haftalık özet: her 7 günde bir "sertifika". Ödüller platform diliyle, hiçbiri para etmiyor. */
+function showWeek(){
+  const W = S.week, wk = S.day / 7;
+  const net = W.earned + W.tips - W.fuel;
+  const awards = [];
+  if(W.complaints === 0) awards.push(['🏅','Sıfır Şikayet','Kimse şikayet etmedi. Kimse teşekkür de etmedi, ama o ayrı rozet, o yok.']);
+  else awards.push(['📋','Gelişime Açık',`${W.complaints} şikayet. Platform bunu "geri bildirim" diye adlandırıyor. Sen başka türlü adlandırıyorsun.`]);
+  if(W.breaks === 0) awards.push(['🔥','Demir Kıç',`Bir hafta boyunca sıfır mola. Verimlilik: %100. Bel: %40.`]);
+  else awards.push(['☕','Çay Dostu',`${W.breaks} mola. Her biri 40 ₺. Her biri değdi. Platform aynı fikirde değil.`]);
+  if(W.tips > W.earned * 0.15) awards.push(['💸','Bahşiş Mıknatısı',`Bahşişler ücretin %${Math.round(W.tips/Math.max(1,W.earned)*100)}'i. İnsanlar seni seviyor ya da acıyor. İkisi de para.`]);
+  else awards.push(['🪙','Tutumlu Müşteri Kurbanı',`Bahşiş ${fmt(W.tips)}. "Bahşiş yarın" diyenlerin yarını gelmedi.`]);
+  if(W.skips >= 3) awards.push(['🚫','Seçici',`${W.skips} tur geçtin. Algoritma not aldı. Algoritma her şeyi not alır.`]);
+  if(W.best) awards.push(['⭐','Haftanın Teslimatı',`${W.best.customer}: ${fmt(W.best.total)}. Olay: "${W.best.title}". Bir daha olmayacak, kaydet.`]);
+  $('cert').innerHTML = `
+    <div class="cert-head">HAFTANIN KURYESİ</div>
+    <div class="cert-sub">${wk}. hafta · katılım sertifikası</div>
+    <div class="cert-name">Sen değilsin.</div>
+    <p class="small" style="margin-top:4px">Haftanın kuryesi Pendik'ten biri. Onu da kimse görmedi. Ama bu sertifika senin. Çerçevelet.</p>
+    <div class="summary" style="margin-top:10px">
+      <span>Teslimat</span><span>${W.deliveries}</span>
+      <span>Ücret</span><span>+${fmt(W.earned)}</span>
+      <span>Bahşiş</span><span>+${fmt(W.tips)}</span>
+      <span>Benzin</span><span style="color:var(--bad)">−${fmt(W.fuel)}</span>
+      <span class="tot">Haftalık net</span><span class="tot" style="color:${net>=0?'var(--good)':'var(--bad)'}">${fmt(net)}</span>
+    </div>
+    <div class="awards">${awards.map(a=>`<div class="award"><div class="ico">${a[0]}</div><div><b>${a[1]}</b><div class="small muted">${a[2]}</div></div></div>`).join('')}</div>
+    <div class="cert-stamp">ONAYLANDI<br><span>otomatik</span></div>`;
+  Sfx.tada();
+  show('s-week');
+}
+$('btn-week-go').onclick = () => { S.week = defaultState().week; S.day++; S.dayClosed = false; startDay(); };
+$('btn-sound').onclick = (e) => { e.stopPropagation(); Sfx.toggle(); renderHUD(); };
+
+/* ---------------- KAZANMA / KOVULMA ---------------- */
+/* Pixel art: her satır bir piksel sırası, harfler PALETTE'ten renk, '.' boş. box-shadow ile çizilir. */
+const PIXEL_ART = {
+  termos: { pal:{X:'#1d1a2b',A:'#7fe0c3',B:'#f4f4f4',C:'#54b89c'}, rows:[
+    '....XXXX....','...XAAAAX...','...XAAAAX...','..XXXXXXXX..','..XAAAAAAX..','..XAAAAACX..','..XABBBACX..','..XABBBACX..','..XAAAAACX..','..XAAAAACX..','..XAAAAACX..','..XAAAAACX..','..XCCCCCCX..','...XXXXXX...'] },
+  phone: { pal:{X:'#1d1a2b',S:'#2b6cff',W:'#f4f4f4',K:'#111',G:'#48e08a'}, rows:[
+    '..XXXXXXXX..','.XSSSSSSSSX.','.XSKKSSSSSX.','.XSKKSSSSSX.','.XSSSSSSSSX.','.XSSWWWSSSX.','.XSSWSWSSSX.','.XSSWWWSSSX.','.XSSSSSSSSX.','.XSSSGSSSSX.','.XSSSSSSSSX.','.XSSSSSSSSX.','.XSSSSSSSSX.','..XXXXXXXX..'] },
+  tshirt: { pal:{X:'#1d1a2b',W:'#f4f4f4',L:'#ff5a1f'}, rows:[
+    '.XXX....XXX.','XWWWXXXXWWWX','XWWWWWWWWWWX','XWWWWWWWWWWX','.XXWWWWWWXX.','..XWWWWWWX..','..XWWWWWWX..','..XWWWWWWX..','..XWWWWWWX..','..XWWWWLWX..','..XWWWWWWX..','..XXXXXXXX..'] },
+  scooter: { pal:{X:'#1d1a2b',R:'#ff5a1f',K:'#222',W:'#f4f4f4'}, rows:[
+    '........XX..','........XRX.','........XRX.','........XRX.','........XRX.','........XRX.','........XRX.','.XXXXXXXXRX.','XRRRRRRRRRRX','XRRRRRRRRRRX','.XKX....XKX.','.XKX....XKX.'] }
+};
+function pixelHTML(key, size){
+  const art = PIXEL_ART[key]; if(!art) return '';
+  const sh = [];
+  art.rows.forEach((row,y) => [...row].forEach((ch,x) => { if(ch !== '.' && art.pal[ch]) sh.push(`${x*size}px ${y*size}px 0 0 ${art.pal[ch]}`); }));
+  const w = art.rows[0].length*size, h = art.rows.length*size;
+  return `<div class="pxwrap" style="width:${w}px;height:${h}px"><div class="px" style="width:${size}px;height:${size}px;box-shadow:${sh.join(',')}"></div></div>`;
+}
+function showWin(){
+  const g = goal();
+  renderAvatar($('win-avatar'));
+  const likes = rint(7,14), views = rint(38,61);
+  const next = /\d/.test(g.name) ? g.name.replace(/\d+/, m=>+m+1) : g.name + ' 2.0';
+  $('win-big').innerHTML = `${g.emoji}<br>ALDIN!`;
+  $('win-card').innerHTML = `
+    <div class="story">
+      <div class="story-top"><div class="story-av"></div><div><b>${slug(S.name)}_kurye</b> <span class="muted">· az önce</span></div></div>
+      <div class="story-img">${pixelHTML(g.art, 10)}</div>
+      <div class="story-bar"><span>❤️ ${likes}</span><span>💬 1</span><span>✈️ 0</span><span class="muted" style="margin-left:auto">${views} görüntülenme</span></div>
+      <div class="story-cap"><b>${slug(S.name)}_kurye</b> Nihayet. 🙏 #hedef #emek #kapitaleats</div>
+      <div class="story-cap muted"><b>musti_kuzen</b> kaç para</div>
+    </div>
+    <p class="twist">Tebrikler. Story'ni ${likes} kişi beğendi. Kazandın.</p>
+    <p><b>${g.name}</b> artık senin. ${S.day} gün, ${S.accepted} teslimat, ${(S.hayri||0)} Hayri Abi, ${(S.nebahat||0)} börek.</p>
+    <p class="muted small">3 gün sonra "${next}" tanıtıldı. Seninki "klasik" oldu. Klasik, "eski" demenin kibar hali.</p>
+    <p class="muted small">Kalan para: ${fmt(S.money - S.goalPrice)}. Yeni bir hedef seçebilirsin. Seçersin.</p>`;
+  S.money -= S.goalPrice; S.goalId = null;
+  clearSave();
+  show('s-win'); Sfx.tada();
+}
+function showFired(reason){
+  renderAvatar($('fired-avatar'));
+  $('fired-card').innerHTML = `
+    <p><b>Hesabın askıya alındı.</b></p>
+    <p>${reason}</p>
+    <p class="muted small">${S.day} gün dayandın, ${S.accepted} paket taşıdın, kasada ${fmt(S.money)} kaldı. Hedefe ${fmt(Math.max(0,S.goalPrice-S.money))} vardı. Hiç olmadığı kadar yakındın. Değildin.</p>
+    <p class="twist">Destek botu: "Başvurunuzu 3-5 iş günü içinde inceleyeceğiz." (İncelemeyecek.)</p>`;
+  S.goalId = null; clearSave();
+  show('s-fired');
+}
+function restart(){
+  selectedGoal = null;
+  S = Object.assign(defaultState(), { owned:S.owned, equipped:S.equipped, money:Math.max(CONFIG.startMoney, S.money) });
+  renderGoals(); $('btn-start').disabled = true; $('btn-continue').hidden = true; renderAllAvatars(); show('s-start');
+}
+
+/* ---------------- OLAY BAĞLAMA ---------------- */
+$('btn-start').onclick = startGame;
+$('btn-news-go').onclick = () => { nextOrder(); };
+$('btn-ev-next').onclick = () => { if(S.current.skip){ S.rating = clamp(S.rating + S.current.ratingDelta,1,5); S.money += S.current.extraMoney + S.current.tip - S.current.order.fuel; S.dayFuel += S.current.order.fuel; S.orderIdx++; renderHUD(); if(!checkWin() && !checkFired()) nextOrder(); } else finishDelivery(); };
+$('btn-res-next').onclick = nextOrder;
+$('btn-sleep').onclick = sleep;
+$('btn-again').onclick = restart;
+$('btn-fired-again').onclick = restart;
+$('btn-continue').onclick = () => { const o = load(); if(!o) return; S = Object.assign(defaultState(), o); renderAllAvatars(); renderHUD(); showAway(); };
+$('btn-away-go').onclick = resume;
+$('btn-skip').onclick = skipRound;
+
+/* Çevrimdışı gelir: son kayıttan bu yana geçen saat × yan gelir. Yan gelir yoksa 0 ₺ ve bir espri. */
+function showAway(){
+  const hours = Math.min(CONFIG.idleCapHours, Math.max(0, (Date.now() - (S.lastSeen||Date.now())) / 3600000));
+  if(hours < 0.1) return resume();
+  const side = SHOP.find(x => x.id === S.equipped.side);
+  const h = hours.toFixed(1).replace('.',',');
+  let html;
+  if(side){
+    const gross = Math.round(side.idle.perHour * hours), cut = Math.round(gross * side.idle.cut), net = gross - cut;
+    S.money += net;
+    html = `<p><b>${h} saat</b> yoktun. ${side.name} çalıştı.</p>
+      <div class="summary"><span>Kazanç</span><span>+${fmt(gross)}</span><span>Kesinti (benzin, komisyon, "işletme gideri")</span><span style="color:var(--bad)">−${fmt(cut)}</span><span class="tot">Hesabına geçen</span><span class="tot" style="color:var(--good)">+${fmt(net)}</span></div>
+      <p class="muted small">Hesap ${hours >= CONFIG.idleCapHours ? 'sadece 8 saat için işledi. Sonrası "sistem bakımı".' : 'dakikası dakikasına işledi. Bu sefer.'}</p>`;
+  } else {
+    html = `<p><b>${h} saat</b> yoktun. Hesabına geçen: <b>0 ₺</b>.</p>
+      <p class="muted">Kapitalizm uyumaz ama sen uyudun. Dükkanda "Yan gelir" eşyaları var: motor sen yokken de çalışabilir.</p>`;
+  }
+  $('away-card').innerHTML = html;
+  renderHUD(); show('s-away');
+}
+
+function resume(){
+  // Kaldığı yere göre devam: sürüş/olay ortasındaysa siparişi yeniden göster.
+  if(S.phase === 's-week') { showWeek(); }
+  else if(S.dayClosed) { renderDaySummary(); renderService(); renderShop(); renderHUD(); show('s-dayend'); }
+  else if(S.phase === 's-news') { show('s-news'); }
+  else if(S.orderIdx >= CONFIG.ordersPerDay) { endDay(); }
+  else { nextOrder(); }
+}
+
+/* ---------------- BOOT ---------------- */
+function boot(data){
+  renderGoals(); renderAllAvatars();
+  $('name-input').placeholder = pick(COURIER_NAMES) + ' (boş bırakırsan biz seçeriz)';
+  if(data && data.goalId){ S = Object.assign(defaultState(), data); renderAllAvatars(); renderHUD(); resume(); return; }
+  // Eski sürüm kaydı varsa görmezden gel (yapı değişti)
+  const saved = load();
+  if(saved){ $('btn-continue').hidden = false; }
+  show('s-start');
+}
+const hot = window.claude && window.claude.hot;
+if(hot && hot.snapshot){ try{ hot.snapshot(() => S); }catch(e){} }
+if(hot && hot.ready){ hot.ready(boot); } else { boot(hot && hot.data); }
+
+/* =====================================================================
+   EVENT_TEMPLATES — doldurup EVENTS dizisine taşı.
+   '...' yazan yerleri sen yazarsın. effects örnekleri yorum olarak duruyor.
+   ===================================================================== */
+const EVENT_TEMPLATES = [
+  { id:'musteri_1', title:'...', stage:'Kapıda',
+    text:'...',
+    choices:[
+      { label:'...', result:'...', effects:{ /* tip:50, rating:0.2 */ } },
+      { label:'...', outcomes:[
+        { chance:0.6, result:'...', effects:{ /* tipPct:0.2 */ } },
+        { chance:0.4, result:'...', effects:{ /* complaint:true, rating:-0.4 */ } } ] }
+    ] },
+  { id:'guvenlik_1', title:'...', stage:'Apartmanda',
+    text:'...',
+    choices:[
+      { label:'...', result:'...', effects:{ } },
+      { label:'...', result:'...', effects:{ } }
+    ] },
+  { id:'komsu_1', title:'...', stage:'Apartmanda',
+    text:'...',
+    choices:[
+      { label:'...', result:'...', effects:{ } },
+      { label:'...', outcomes:[
+        { chance:0.5, result:'...', effects:{ } },
+        { chance:0.5, result:'...', effects:{ } } ] }
+    ] },
+  { id:'cevirme_1', title:'...', stage:'Yolda',
+    text:'...',
+    choices:[
+      { label:'...', result:'...', effects:{ /* money:-250 */ } },
+      { label:'...', outcomes:[
+        { chance:0.7, result:'...', effects:{ } },
+        { chance:0.3, result:'...', effects:{ /* money:-900, feeLost:true */ } } ] }
+    ] },
+  { id:'restoran_gec_1', title:'...', stage:'Restoranda',
+    text:'...',
+    choices:[
+      { label:'...', result:'...', effects:{ /* rating:-0.2 */ } },
+      { label:'...', result:'...', effects:{ /* feeLost:true */ } }
+    ] }
+];
+</script>
+</body>
+</html>
