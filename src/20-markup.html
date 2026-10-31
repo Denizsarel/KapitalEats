@@ -1,0 +1,160 @@
+</head>
+<body>
+<div id="app">
+  <header class="hud" id="hud" hidden>
+    <div class="hud-top">
+      <div class="logo">Kapital<span>Eats</span></div>
+      <div style="display:flex;align-items:center;gap:8px"><div class="day" id="hud-day">GÜN 1</div><button class="snd" id="btn-sound" aria-label="Ses">🔊</button></div>
+    </div>
+    <div class="hud-row">
+      <div class="hud-avatar" id="hud-avatar"></div>
+      <div style="display:grid;gap:4px;min-width:0;flex:1">
+        <div class="money" id="hud-money">0 ₺</div>
+        <div class="stats">
+          <span>⭐ <b id="hud-rating">4.6</b></span>
+          <span>📈 Kabul <b id="hud-accept">100%</b></span>
+          <span title="Motor aşınması">🔧 <b id="hud-wear">0%</b></span>
+        </div>
+      </div>
+    </div>
+    <div class="energy">
+      <div class="lbl"><span>⚡ Enerji <b id="hud-energy-txt" style="color:var(--fg);font-weight:500">100</b></span><span id="hud-tariff"></span></div>
+      <div class="bar"><i id="hud-energy"></i></div>
+    </div>
+    <div class="goalbar">
+      <div class="lbl"><span id="hud-goalname">Hedef</span><b id="hud-goalprice">0 ₺</b></div>
+      <div class="bar"><i id="hud-bar"></i></div>
+    </div>
+  </header>
+
+  <main>
+    <!-- START -->
+    <section class="screen" id="s-start">
+      <div class="hero">
+        <div class="big">Kapital<span>Eats</span></div>
+        <p class="muted small">Hayatta kalmak için değil, almak için çalış.</p>
+      </div>
+      <div class="avatar-stage"><div class="avatar" id="start-avatar"></div></div>
+      <p>Sen bir kuryesin. Kiran ödeniyor, karnın tok. Ama bir şey eksik: <b>ihtiyacın olmayan pahalı bir şey.</b> Hedefini seç, mesaiye başla.</p>
+      <h2>Adın Ne?</h2>
+      <input class="name-input" id="name-input" maxlength="16" placeholder="Kurye adı" autocomplete="off">
+      <h2>Hedefini Seç</h2>
+      <div class="goals" id="goals"></div>
+      <div class="actions one"><button class="btn primary" id="btn-start" disabled>Mesaiye Başla</button></div>
+      <button class="btn ghost" id="btn-continue" hidden>Kaldığım yerden devam et</button>
+    </section>
+
+    <!-- NEWS -->
+    <section class="screen" id="s-news" hidden>
+      <h2 id="news-day">GÜN 1 · SABAH BÜLTENİ</h2>
+      <div id="news-list" style="display:grid;gap:10px"></div>
+      <div class="spacer"></div>
+      <div class="actions one"><button class="btn primary" id="btn-news-go">Mesaiye Başla</button></div>
+    </section>
+
+    <!-- ORDER -->
+    <section class="screen" id="s-order" hidden>
+      <div class="counter">
+        <h2 id="order-no">Tur 1/6</h2>
+        <div class="dots" id="order-dots"></div>
+      </div>
+      <div class="notif" id="order-hint"></div>
+      <p class="small muted">Birini seç. Diğerleri başka kuryeye gider, kimse sana kızmaz. Detayları aklında tut, sonra lazım olabilir.</p>
+      <div class="offers" id="offers"></div>
+      <div class="spacer"></div>
+      <div class="actions one"><button class="btn ghost" id="btn-skip">Hiçbirini alma, bu turu geç</button></div>
+    </section>
+
+    <!-- AWAY (çevrimdışı gelir) -->
+    <section class="screen away" id="s-away" hidden>
+      <div class="hero"><div class="big">SEN YOKKEN</div></div>
+      <div class="card" id="away-card"></div>
+      <div class="spacer"></div>
+      <div class="actions one"><button class="btn primary" id="btn-away-go">Devam</button></div>
+    </section>
+
+    <!-- RIDE -->
+    <section class="screen" id="s-ride" hidden>
+      <div class="scene">
+        <div class="layer stars"></div>
+        <div class="layer far"></div>
+        <div class="layer near"></div>
+        <div class="layer windows"></div>
+        <div class="layer road"></div>
+        <div class="layer curb"></div>
+        <div class="wx rain"></div>
+        <div class="wx snow"></div>
+        <div class="rider"><div class="avatar" id="ride-avatar"></div></div>
+      </div>
+      <p class="ride-text" id="ride-text"><span class="dots-anim">Teslimata gidiliyor</span></p>
+    </section>
+
+    <!-- EVENT -->
+    <section class="screen" id="s-event" hidden>
+      <div class="event-title" id="ev-title"></div>
+      <div class="stage" id="ev-stage"></div>
+      <div class="card accent">
+        <p class="event-text" id="ev-text"></p>
+      </div>
+      <div class="spacer"></div>
+      <div id="ev-choices" class="actions one"></div>
+      <div id="ev-result" class="card" hidden>
+        <div class="result-box" id="ev-result-text"></div>
+        <div class="voice" id="ev-voice" hidden></div>
+        <div class="delta" id="ev-delta"></div>
+        <button class="btn primary" id="btn-ev-next">Teslim Et</button>
+      </div>
+    </section>
+
+    <!-- RESULT -->
+    <section class="screen" id="s-result" hidden>
+      <h2 id="res-title">Teslim Edildi</h2>
+      <div class="card">
+        <div class="summary" id="res-summary"></div>
+      </div>
+      <p class="small muted" id="res-note"></p>
+      <div class="spacer"></div>
+      <div class="actions one"><button class="btn primary" id="btn-res-next">Sonraki Sipariş</button></div>
+    </section>
+
+    <!-- DAY END / SHOP -->
+    <section class="screen" id="s-dayend" hidden>
+      <h2 id="de-title">GÜN 1 BİTTİ</h2>
+      <div class="card"><div class="summary" id="de-summary"></div></div>
+      <div id="de-reviews" style="display:grid;gap:8px"></div>
+      <h2>Usta Cemil</h2>
+      <div class="card" id="service"></div>
+      <div class="avatar-stage"><div class="avatar" id="shop-avatar"></div></div>
+      <h2>Kurye Dükkanı</h2>
+      <p class="small muted">Hedefe yaklaşmaz ama iyi görünürsün. Kapitalizm de bu zaten.</p>
+      <div class="shop" id="shop"></div>
+      <div class="actions one"><button class="btn primary" id="btn-sleep">Uyu → Yeni Gün</button></div>
+    </section>
+
+    <!-- WEEK -->
+    <section class="screen" id="s-week" hidden>
+      <div class="cert" id="cert"></div>
+      <div class="spacer"></div>
+      <div class="actions one"><button class="btn primary" id="btn-week-go">Yeni Haftaya</button></div>
+    </section>
+
+    <!-- FIRED -->
+    <section class="screen fired" id="s-fired" hidden>
+      <div class="hero"><div class="big">KOVULDUN</div></div>
+      <div class="avatar-stage"><div class="avatar" id="fired-avatar"></div></div>
+      <div class="card" id="fired-card"></div>
+      <div class="spacer"></div>
+      <div class="actions one"><button class="btn primary" id="btn-fired-again">Başka Bahara</button></div>
+    </section>
+
+    <!-- WIN -->
+    <section class="screen win" id="s-win" hidden>
+      <div class="hero"><div class="big" id="win-big"></div></div>
+      <div class="avatar-stage"><div class="avatar" id="win-avatar"></div></div>
+      <div class="card" id="win-card"></div>
+      <div class="spacer"></div>
+      <div class="actions one"><button class="btn primary" id="btn-again">Yeni Hedef Seç</button></div>
+    </section>
+  </main>
+</div>
+
