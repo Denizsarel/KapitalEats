@@ -615,8 +615,8 @@ const CONFIG = {
   ratingSoftCap: 4.8,
   ratingFloorDays: 3,       // ilk N gün puan 3,0'ın altına inmez, kimse kovulmaz
   fireRating: 2.0,
-  maxComplaints: 4,
-  complaintDecayDays: 7,    // bu kadar şikayetsiz günden sonra bir şikayet arşivlenir
+  maxComplaints: 5,
+  complaintDecayDays: 5,    // bu kadar şikayetsiz günden sonra bir şikayet arşivlenir
   minOffersForFire: 18,     // kabul oranı kuralı bu kadar turdan önce işlemez
   rideMs: 2600,             // sürüş animasyonu süresi
   rideSkipAfterMs: 1000,    // bu süreden sonra dokunarak geçilebilir
@@ -1270,7 +1270,7 @@ const EVENTS = [
       choices: memChoices(
         `${o.noteValue}${gen(o.noteValue)} misafiriyim`, ['Ahmet Bey','Nurten Hanım','Kemal Bey','Sevgi Hanım'].filter(x=>x!==o.noteValue).slice(0,2).map(x=>`${x}${gen(x)} misafiriyim`),
         { result:'Güvenlik telsize bile uzanmaz, bariyeri açar: "Buyrun, B Blok." Kuralın adı site kuralı; ismin adı anahtar. Asansörde ayna var, yüzünü görürsün, gülüyorsun.', effects:{ tipPct:0.1 } },
-        { result:'"Öyle biri yok burada." Bariyer inmez bile, çünkü hiç kalkmadı. Müşteri terlikle aşağı iner, paketi bariyerin üstünden alır: "Zahmet oldu bana." Güvenlik telsize konuşur: "Kurye çıkıyor."', effects:{ rating:-0.4, complaint:true } }
+        { result:'"Öyle biri yok burada." Bariyer inmez bile, çünkü hiç kalkmadı. Müşteri terlikle aşağı iner, paketi bariyerin üstünden alır: "Zahmet oldu bana." Güvenlik telsize konuşur: "Kurye çıkıyor."', effects:{ rating:-0.2, complaint:true } }
       )
       };
     }

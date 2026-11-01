@@ -158,7 +158,7 @@ const EVENTS = [
       choices: memChoices(
         `${o.noteValue}${gen(o.noteValue)} misafiriyim`, ['Ahmet Bey','Nurten Hanım','Kemal Bey','Sevgi Hanım'].filter(x=>x!==o.noteValue).slice(0,2).map(x=>`${x}${gen(x)} misafiriyim`),
         { result:'Güvenlik telsize bile uzanmaz, bariyeri açar: "Buyrun, B Blok." Kuralın adı site kuralı; ismin adı anahtar. Asansörde ayna var, yüzünü görürsün, gülüyorsun.', effects:{ tipPct:0.1 } },
-        { result:'"Öyle biri yok burada." Bariyer inmez bile, çünkü hiç kalkmadı. Müşteri terlikle aşağı iner, paketi bariyerin üstünden alır: "Zahmet oldu bana." Güvenlik telsize konuşur: "Kurye çıkıyor."', effects:{ rating:-0.4, complaint:true } }
+        { result:'"Öyle biri yok burada." Bariyer inmez bile, çünkü hiç kalkmadı. Müşteri terlikle aşağı iner, paketi bariyerin üstünden alır: "Zahmet oldu bana." Güvenlik telsize konuşur: "Kurye çıkıyor."', effects:{ rating:-0.2, complaint:true } }
       )
       };
     }

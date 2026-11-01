@@ -49,8 +49,8 @@ const CONFIG = {
   ratingSoftCap: 4.8,
   ratingFloorDays: 3,       // ilk N gün puan 3,0'ın altına inmez, kimse kovulmaz
   fireRating: 2.0,
-  maxComplaints: 4,
-  complaintDecayDays: 7,    // bu kadar şikayetsiz günden sonra bir şikayet arşivlenir
+  maxComplaints: 5,
+  complaintDecayDays: 5,    // bu kadar şikayetsiz günden sonra bir şikayet arşivlenir
   minOffersForFire: 18,     // kabul oranı kuralı bu kadar turdan önce işlemez
   rideMs: 2600,             // sürüş animasyonu süresi
   rideSkipAfterMs: 1000,    // bu süreden sonra dokunarak geçilebilir
