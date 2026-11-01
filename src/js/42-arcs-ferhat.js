@@ -112,7 +112,7 @@ ARC_BEATS.push({
       text,
       choices: [
         { label: 'Dur, yanına git',
-          result: `Motoru bordüre yatırır, koşarsın. Ferhat sırtüstü, vizör çatlak, gözleri açık: "Kanka kaç dakika oldu?" "Bir." "İyi, bir dakika." Kaskı sen çıkarırsın, kolunu sen tutarsın, 112'yi sen ararsın. Ambulans on sekiz dakikada gelir; o saymaz, sen sayarsın. Ekranda bu arada: "Teslimat süresi aşıldı, ücret yansıtılmayacaktır." Ferhat sedyede: "Lisans kalsın kanka. Lisans kalsın."`,
+          result: `Motoru bordüre yatırırsın, koşarsın. Ferhat sırtüstü, vizör çatlak, gözleri açık: "Kanka kaç dakika oldu?" "Bir." "İyi, bir dakika." Kaskı sen çıkarırsın, kolunu sen tutarsın, 112'yi sen ararsın. Ambulans on sekiz dakikada gelir; o saymaz, sen sayarsın. Ekranda bu arada: "Teslimat süresi aşıldı, ücret yansıtılmayacaktır." Ferhat sedyede: "Lisans kalsın kanka. Lisans kalsın."`,
           effects: { feeLost: true, rating: -0.1, fact: 'ferhat_saved', sets: { saved: true }, rel: { ferhat: 2 }, energy: -5 } },
         { label: 'Motoru kaldır, paketi topla',
           result: `Ferhat'ın Kuba'sını bordüre çekersin, dağılan paketi toplayıp mavi çantaya tıkarsın; o kendi kalkar, dizini tutar, kaskını çıkarmaz. "Kanka dur, bir dakikaya iyiyim." Bir dakika beklersin, iki beklersin, sonra sürersin. Kapıda ${who} telefonu sallar: "On bir dakika geç." Akşam kayıtsız numaradan mesaj: "Diz şiş, lisans sağlam. Sağ ol reis. 23.41"`,

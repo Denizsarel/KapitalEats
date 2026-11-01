@@ -1,5 +1,5 @@
 /* ---------------- OLAYLAR ---------------- */
-const RESOURCE_EVENTS = { enerji_bitiyor:'enerji', bayildin:'enerji', motor_ariza:'motor' };
+const RESOURCE_EVENTS = { enerji_bitiyor:'enerji', bayildin:'bayildin', motor_ariza:'motor' };
 function eligible(e){
   if(e.minDay && S.day < e.minDay) return false;
   if(e.weather && !e.weather.includes(S.weather)) return false;
@@ -25,10 +25,11 @@ function pickEvent(){
   // 1) hikaye: bu sipariş hikaye fişiyse ya da ertelenmiş bir ark varsa
   if(S.todayArc && !S.arcDone){
     const A = arcState(S.todayArc.arc), beat = todayBeat() || (S.todayArc.arc === 'hayri' && S.todayArc.step === 1 ? ENGINE_NAME_BEAT : null);
-    const fires = (S.todayArc.mode === 'ticket' && (o.story === S.todayArc.arc || A.defer >= 1)) || (S.todayArc.mode === 'ride' && beat && (o.km >= (beat.minKm || 0) || A.defer >= 1));
+    const ds = beat ? beatDistricts(beat) : null;
+    const fires = (S.todayArc.mode === 'ticket' && (o.story === S.todayArc.arc || A.defer >= 1)) || (S.todayArc.mode === 'ride' && beat && ((o.km >= (beat.minKm || 0) && (!ds || ds.includes(o.district))) || A.defer >= 2));
     if(fires){ const ev = arcEventFor(S.todayArc.arc, S.todayArc.step); if(ev) return ev; }
   }
-  if(S.day === 1 && S.orderIdx === 0 && !S.arcDone && S.todayArc == null){ const ev = arcEventFor('hayri', 1); if(ev){ S.todayArc = { arc:'hayri', step:1, mode:'ticket', round:1 }; return ev; } }
+  if(S.day === 1 && S.orderIdx === 0 && !S.arcDone && S.todayArc == null && arcState('hayri').step === 1 && !arcState('hayri').done){ const ev = arcEventFor('hayri', 1); if(ev){ S.todayArc = { arc:'hayri', step:1, mode:'ticket', round:1 }; return ev; } }
   // 2) öğretici zorlaması
   if(S.forceEvent){ const ev = EVENTS.find(e => e.id === S.forceEvent); S.forceEvent = null; if(ev) return ev; }
   const pool = EVENTS.filter(eligible);
@@ -68,10 +69,10 @@ function showEvent(ev){
   $('ev-choices').querySelectorAll('button').forEach(b => b.onclick = () => resolveChoice(ev, +b.dataset.i));
   show('s-event');
 }
-function pickOutcome(choice){
+function pickOutcome(choice, noShift){
   if(!choice.outcomes) return choice;
   const isBadOut = (oc) => { const e = oc.effects||{}; return (e.money<0)||(e.rating<0)||e.feeLost||e.complaint; };
-  const shift = badShift();
+  const shift = noShift ? 0 : badShift();
   const weights = choice.outcomes.map(oc => Math.max(0.01, oc.chance + (isBadOut(oc) ? shift : -shift)));
   const tot = weights.reduce((x,y)=>x+y,0); let r = Math.random()*tot;
   for(let i=0;i<choice.outcomes.length;i++){ r -= weights[i]; if(r <= 0) return choice.outcomes[i]; }
@@ -80,14 +81,14 @@ function pickOutcome(choice){
 function resolveChoice(ev, idx){
   let built = currentBuilt;
   // Adını yeni söylediyse metinler yeniden kurulsun (Hayri'nin repliğinde adı geçsin)
-  if(ev.beat && !S.name){ const typed = ($('ev-name').value || '').trim(); S.name = typed || pick(COURIER_NAMES); try{ built = ev.beat.build(S.current.order, S, arcState(ev.arc)); }catch(e){} $('ev-name').hidden = true; }
+  if(ev.beat && !S.name){ const typed = ($('ev-name').value || '').trim(); S.name = typed || pick(COURIER_NAMES); META.name = S.name; try{ built = ev.beat.build(S.current.order, S, arcState(ev.arc)); }catch(e){} $('ev-name').hidden = true; }
   const choice = built.choices[idx] || currentBuilt.choices[idx];
-  const out = pickOutcome(choice);
+  const out = pickOutcome(choice, !!RESOURCE_EVENTS[ev.id]);
   if(ev.beat) S.arcCtx = arcState(ev.arc);
   const d = applyEffects(out.effects || {});
   S.arcCtx = null;
   // destek uyarısı: itiraz %40 bir şikayeti arşivler
-  if(ev.id === 'destek_uyari' && /itiraz/i.test(choice.label)){ if(Math.random() < 0.4 && S.complaints > 0){ S.complaints--; d.push({t:'Şikayet arşivlendi', v:1}); } else d.push({t:'İtiraz reddedildi', v:-1}); }
+  if(ev.id === 'destek_uyari' && trLower(choice.label).includes('itiraz')){ if(Math.random() < 0.4 && S.complaints > 0){ S.complaints--; d.push({t:'Şikayet arşivlendi', v:1}); } else d.push({t:'İtiraz reddedildi', v:-1}); }
   if(ev.id === 'kargo_ferhat') S.boxDelivered = true;
   if(ev.beat) advanceArc(ev.arc, ev.beat, choice);
   else { (META.seenEvents[ev.id] = META.seenEvents[ev.id] || []).push(idx); track('event', { eventId: ev.id, label: choice.label }); }
@@ -108,19 +109,20 @@ function resolveChoice(ev, idx){
 function advanceArc(arc, beat, choice){
   const A = arcState(arc);
   if(beat.final || (choice.final)) { A.done = true; }
-  else { A.step = beat.step + 1; A.due = S.day + (beat.dueGap || 2); }
-  A.defer = 0; S.arcDone = true;
+  else if(!A.done) { A.step = Math.max(A.step, beat.step + 1); A.due = S.day + (beat.dueGap || 2); }
+  A.defer = 0; if(S.todayArc && S.todayArc.arc === arc) S.arcDone = true;
   META.chars[arc] = META.chars[arc] || 0;
   saveMeta();
 }
 /* Etkiler. Teslimat bağlamında S.current üzerinden; telefon/kapı kartlarında doğrudan kasaya işler. */
 function applyEffects(e){
   const c = S.current || { order:{ fee:0, floor:1 }, tip:0, extraMoney:0, standalone:true }, o = c.order || { fee:0 }, d = [];
-  if(e.tip){ const t = Math.round(e.tip * S.todayMods.tipMult); c.tip += t; d.push({t:`+${fmt(t)} bahşiş`, v:1}); }
-  if(e.tipPct){ const t = Math.round(o.fee * e.tipPct * S.todayMods.tipMult); c.tip += t; d.push({t:`+${fmt(t)} bahşiş`, v:1}); }
+  const tipM = S.todayMods.tipMult * (activeRuleEffects().tipMult || 1);
+  if(e.tip){ const t = Math.round(e.tip * tipM); c.tip += t; d.push({t:`+${fmt(t)} bahşiş`, v:1}); }
+  if(e.tipPct){ const t = Math.round(o.fee * e.tipPct * tipM); c.tip += t; d.push({t:`+${fmt(t)} bahşiş`, v:1}); }
   if(e.money){ c.extraMoney += e.money; d.push({t:`${e.money>0?'+':''}${fmt(e.money)}`, v:e.money}); }
   if(e.feeLost){ c.feeLost = true; d.push({t:`Ücret ödenmedi (−${fmt(o.fee)})`, v:-1}); }
-  if(e.rating){ c.ratingDelta = (c.ratingDelta||0) + e.rating; d.push({t:`${e.rating>0?'+':''}${e.rating.toFixed(1)} ⭐`, v:e.rating}); }
+  if(e.rating){ c.ratingDelta = (c.ratingDelta||0) + e.rating; d.push({t:`${e.rating>0?'+':'−'}${xfmt(Math.abs(e.rating).toFixed(1))} ⭐`, v:e.rating}); }
   if(e.complaint){ const dbl = activeRuleEffects().complaintsDouble ? 2 : 1; c.ratingDelta = (c.ratingDelta||0) - 0.3; S.offered += 1; S.complaints += dbl; S.lastComplaintDay = S.day; S.week.complaints += 1; if(S.special && S.special.day === S.day) S.specialStats.complaints++; d.push({t:`Müşteri şikayeti (${S.complaints}/${CONFIG.maxComplaints})`, v:-1}); c.bad = true; }
   if(e.goalPrice && S.goalId){ const old = S.goalPrice; S.goalPrice = Math.min(Math.round(old*e.goalPrice/10)*10, Math.round(S.goalBase*CONFIG.goalInflationCap/10)*10); d.push({t:`Hedef fiyatı ${fmt(old)} → ${fmt(S.goalPrice)}`, v: e.goalPrice>1?-1:1}); flashPrice(e.goalPrice>1); }
   if(e.breakNext){ S.breakNext = true; d.push({t:'☕ Sonraki tur: mola', v:0}); }
@@ -142,30 +144,32 @@ function applyEffects(e){
   if(e.energy){ S.energy = clamp(S.energy + e.energy, 0, CONFIG.energyMax); if(e.energy > 0) c.energyGain = (c.energyGain||0) + e.energy; d.push({t:`⚡ ${e.energy>0?'+':''}${e.energy}`, v:e.energy}); }
   if(e.giftItem){ const pool = SHOP.filter(x => !META.owned.includes(x.id) && x.price > 0 && x.price <= 2800 && x.slot !== 'side' && !x.hidden); const ferhat = SHOP.find(x => x.id === 'helmet_ferhat'); const g = (S.arcCtx && S.arcCtx === META.arcs.ferhat && ferhat && !META.owned.includes('helmet_ferhat')) ? ferhat : (pool.length ? pick(pool) : null); if(g){ META.owned.push(g.id); META.equipped[g.slot] = g.id; META.gifts.push(g.id); renderAllAvatars(); d.push({t:`🎁 ${g.name}`, v:1}); } else { c.extraMoney += 100; d.push({t:'+100 ₺', v:1}); } }
   if(e.skipDelivery){ c.skip = true; }
-  if(c.standalone){ S.money += (c.tip||0) + (c.extraMoney||0); if(c.ratingDelta) S.rating = clamp(S.rating + c.ratingDelta, Math.max(1, (S.dayStartRating||5) - 1), 5); }
+  if(c.standalone){ S.money += (c.tip||0) + (c.extraMoney||0); if(c.ratingDelta) S.rating = clamp(S.rating + c.ratingDelta, Math.max(1, (S.dayStartRating||5) - CONFIG.maxDailyRatingDrop), 5); }
   return d;
 }
 /* Telefon kartı (Musti) sabah bülteninde; kapı kartı (Nuri Bey) gün sonunda. Aynı yapı, farklı kap. */
-function renderArcCard(hostId, kind){
-  const host = $(hostId); if(!host || !S.todayArc || S.arcDone) { if(host) host.innerHTML = ''; return; }
-  const beat = todayBeat(); if(!beat) return;
-  const A = arcState(S.todayArc.arc); let built; try{ built = beat.build({ fee:0, floor:1, district:'', lines:[{name:''}] }, S, A); }catch(e){ console.error('arc card', e); return; }
-  const who = CHAR_NAME[S.todayArc.arc] || '';
+function renderArcCard(hostId, kind, obj){
+  const host = $(hostId); if(!host) return; const done = kind === 'phone' ? S.phoneDone : S.knockDone;
+  if(!obj || done){ host.innerHTML = ''; return; }
+  const beat = beatOf(obj); if(!beat) return;
+  const A = arcState(obj.arc); let built; try{ built = beat.build({ fee:0, floor:1, district:'', hood:'', customer:'', lines:[{name:'', price:0, qty:1}], km:0, total:0, payment:'online' }, S, A); }catch(e){ console.error('arc card', e); return; }
+  const who = CHAR_NAME[obj.arc] || '';
   const inner = kind === 'phone'
     ? `<div class="phone"><div class="from">💬 ${esc(who)} · ${S.day === 1 ? 'şimdi' : 'sabah 08:14'}</div><div class="sms">${esc(built.text)}</div><div class="actions one" id="${hostId}-choices">${built.choices.map((c,i)=>`<button class="btn" data-i="${i}">${esc(c.label)}</button>`).join('')}</div><div id="${hostId}-result" hidden></div></div>`
     : `<div class="card accent"><div class="event-title">${esc(built.title)}</div><div class="stage">${esc(who)} · kapıda</div><p class="event-text" style="margin-top:8px">${esc(built.text)}</p><div class="actions one" id="${hostId}-choices" style="margin-top:10px">${built.choices.map((c,i)=>`<button class="btn" data-i="${i}">${esc(c.label)}</button>`).join('')}</div><div id="${hostId}-result" hidden></div></div>`;
   host.innerHTML = inner;
   host.querySelectorAll('button').forEach(b => b.onclick = () => {
+    if(kind === 'phone' ? S.phoneDone : S.knockDone) return;
     const choice = built.choices[+b.dataset.i]; const out = pickOutcome(choice);
     S.arcCtx = A; const saved = S.current; S.current = null; const d = applyEffects(out.effects || {}); S.current = saved; S.arcCtx = null;
-    advanceArc(S.todayArc.arc, beat, choice);
-    META.storyLog.push({ day:S.day, arc:S.todayArc.arc, step:beat.step, label:choice.label });
-    const v = innerVoice(voiceEffects(out.effects), S.todayArc.arc);
+    advanceArc(obj.arc, beat, choice); if(kind === 'phone') S.phoneDone = true; else S.knockDone = true;
+    META.storyLog.push({ day:S.day, arc:obj.arc, step:beat.step, label:choice.label });
+    const v = innerVoice(voiceEffects(out.effects), obj.arc);
     $(hostId+'-choices').hidden = true;
     $(hostId+'-result').innerHTML = `<div class="result-box" style="margin-top:8px">${esc(out.result||'')}</div>${v?`<div class="voice ${v.kind}" style="margin-top:6px"><b>[${esc(v.q[0])} · ${v.kind==='fail'?'Başarısız':'Başarılı'}]</b> ${esc(v.q[1])}</div>`:''}<div class="delta" style="margin-top:6px">${d.map(x=>`<span class="${x.v>=0?'plus':'minus'}">${esc(x.t)}</span>`).join('')}</div>`;
     $(hostId+'-result').hidden = false;
-    if(kind === 'knock') renderYarin();
+    if(kind === 'knock'){ renderDaySummary(); renderTaksit(); renderEnding(); renderYarin(); }
     renderHUD(); save();
   });
 }
-function renderPhoneCard(){ renderArcCard('phone-card', 'phone'); }
+

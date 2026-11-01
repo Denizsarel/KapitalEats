@@ -5,7 +5,7 @@ const GOALS = [
     desc:'Eskisi gayet çalışıyor ama kamerası 0,3 mm daha büyük.' },
   { id:'tshirt', emoji:'👕', art:'tshirt', name:'Gereksiz Markalı Tasarım Tişört', cat:'fashion', price:14000,
     desc:'Beyaz. Sadece beyaz. Logosu dikişin içinde, kimse görmüyor.' },
-  { id:'termos', emoji:'🥤', art:'termos', name:'Koleksiyon Termos (Sınırlı Renk)', cat:'lifestyle', price:9500,
+  { id:'termos', emoji:'🥤', art:'termos', name:'Koleksiyon Termos (Sınırlı Renk)', cat:'lifestyle', price:12500,
     desc:'Su içmiyorsun ama bu renk bir daha üretilmeyecek.' },
   { id:'scooter', emoji:'🛴', art:'scooter', name:'Elektrikli Scooter', cat:'tech', price:32000,
     desc:'Motorun var. Ama bu motor değil, "yaşam tarzı".' }

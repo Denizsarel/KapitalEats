@@ -16,9 +16,9 @@
         <div class="money" id="hud-money">0 ₺</div>
         <div class="stats">
           <span>⭐ <b id="hud-rating">4.6</b></span>
-          <span id="hud-accept-wrap" hidden>📈 Kabul <b id="hud-accept">100%</b></span>
-          <span id="hud-wear-wrap" hidden title="Motor aşınması">🔧 <b id="hud-wear">0%</b></span>
-          <span id="hud-complaints" class="chipwarn" hidden>⚠️ <b id="hud-complaints-n">0</b>/4</span>
+          <span id="hud-accept-wrap" hidden>📈 Kabul <b id="hud-accept">%100</b></span>
+          <span id="hud-wear-wrap" hidden title="Motor aşınması">🔧 <b id="hud-wear">%0</b></span>
+          <span id="hud-complaints" class="chipwarn" hidden>⚠️ <b id="hud-complaints-n">0</b>/<span id="hud-complaints-max">5</span></span>
           <span id="hud-account" hidden>👤 <b id="hud-account-n">Hesap 2</b></span>
         </div>
       </div>
@@ -30,7 +30,8 @@
     <div class="goalbar" id="hud-goalbar">
       <div class="lbl"><span id="hud-goalname">Hedef</span><b id="hud-goalprice">0 ₺</b></div>
       <div class="bar ticks"><i id="hud-bar"></i></div>
-      <div class="lbl"><span id="hud-taksit" class="muted small"></span><span id="hud-keepsakes" class="small"></span></div>
+      <div class="lbl"><span id="hud-taksit" class="muted small"></span></div>
+      <div id="hud-keepsakes" class="small"></div>
     </div>
   </header>
 
@@ -152,9 +153,9 @@
       <div id="de-knock"></div>
       <div id="de-ending"></div>
       <div id="de-reviews" style="display:grid;gap:8px"></div>
-      <button class="btn ghost" id="btn-toggle-shop">Usta Cemil ve Dükkan</button>
+      <button class="btn ghost" id="btn-toggle-shop">Cemil Usta ve Dükkan</button>
       <div id="de-shopwrap" hidden>
-        <h2>Usta Cemil</h2>
+        <h2>Cemil Usta</h2>
         <div class="card" id="service"></div>
         <div class="avatar-stage"><div class="avatar" id="shop-avatar"></div></div>
         <h2>Kurye Dükkanı</h2>

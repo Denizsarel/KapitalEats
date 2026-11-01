@@ -69,7 +69,7 @@ function pop(text, opts={}){
   const host = $('pops'); if(!host) return;
   const el = document.createElement('div'); el.className = 'pop' + (opts.neg ? ' neg' : '') + (opts.big ? ' big' : ''); el.textContent = text;
   const anchor = opts.at || $('hud-money'); const r = anchor ? anchor.getBoundingClientRect() : { left: 40, top: 80, width: 100 };
-  el.style.left = (r.left + Math.min(r.width, 120) * 0.3 + (opts.dx||0)) + 'px'; el.style.top = (r.top + (opts.dy||0)) + 'px';
+  if(!opts.big) el.style.left = Math.min(r.left + Math.min(r.width, 120) * 0.3 + (opts.dx||0), window.innerWidth - 140) + 'px'; el.style.top = (r.top + (opts.dy||0)) + 'px';
   host.appendChild(el); setTimeout(() => el.remove(), 1200);
 }
 function shake(){ const a = $('app'); if(!a) return; a.classList.remove('shake'); void a.offsetWidth; a.classList.add('shake'); }

@@ -22,7 +22,7 @@ $('btn-week-go').onclick = () => { S.week = defaultState().week; S.day++; S.dayC
 $('btn-sound').onclick = (e) => { e.stopPropagation(); Sfx.toggle(); renderHUD(); };
 $('hud-day').onclick = openMahalle;
 $('btn-mahalle-start').onclick = () => { returnScreen = 's-start'; renderMahalle(); show('s-mahalle'); };
-$('btn-mahalle-back').onclick = () => { const back = returnScreen || 's-start'; returnScreen = null; document.querySelectorAll('.screen').forEach(s => s.hidden = (s.id !== back)); $('hud').hidden = (back === 's-start'); };
+$('btn-mahalle-back').onclick = () => { const back = returnScreen || 's-start'; returnScreen = null; const el = $(back); if(!el || back === 's-mahalle'){ resume(); return; } document.querySelectorAll('.screen').forEach(s => s.hidden = (s.id !== back)); $('hud').hidden = (back === 's-start'); };
 $('scene').onclick = () => { if(S.phase === 's-ride' && performance.now() - rideStarted >= CONFIG.rideSkipAfterMs) arrive(); };
 $('ride-text').onclick = $('scene').onclick;
 
@@ -49,13 +49,19 @@ function showAway(){
   renderHUD(); show('s-away');
 }
 function resume(){
+  if(S.phase === 's-fired' && S.firedReason) { showFired(S.firedReason); return; }
   if(S.phase === 's-week') { showWeek(); }
   else if(S.won || (!S.goalId && S.day > 1)) { restart(); }
   else if(S.dayClosed) { renderDayEnd(); show('s-dayend'); }
-  else if(S.phase === 's-news') { const roll = S.tomorrow && S.tomorrow.day === S.day ? S.tomorrow : null; renderBulletin(roll || rollDay(S.day), ''); show('s-news'); }
+  else if(S.phase === 's-news') { renderBulletin(S.todayRoll || { newsIds:[] }, S.todayPriceCard || ''); show('s-news'); }
   else if(S.phase === 's-goal' || (S.day === 1 && S.orderIdx === 1 && !S.goalId)) { selectedGoal = null; renderGoals(); $('btn-goal-go').disabled = true; show('s-goal'); }
+  else if(S.boxDelivered && S.phase === 's-result') { showWin(); }
   else if(S.orderIdx >= S.dayRounds) { endDay(); }
-  else { nextOrder(); }
+  else {
+    // sürüş ya da olay ortasında kaldıysa: o siparişi geri al, turu yeniden teklif et
+    if(S.current && (S.phase === 's-ride' || S.phase === 's-event')){ S.offered = Math.max(0, S.offered - 1); S.accepted = Math.max(0, S.accepted - 1); S.streak = Math.max(0, S.streak - 1); delete S.orderLog[S.orderIdx]; if(S.current.order && S.current.order.reserved) S.usedReserved = false; S.current = null; S.forceEvent = null; }
+    nextOrder();
+  }
 }
 function renderStart(){
   const saved = load();

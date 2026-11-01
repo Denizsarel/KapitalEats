@@ -69,6 +69,7 @@ ARC_BEATS.push({
   address: { district:'Kadıköy', hood:'Moda', street:'Moda Cad.', no:14, building:'Yıldız Apt.', floor:3, apt:7,
              customer:'Hayri Abi' },            // ticket mode only; the engine picks a restaurant serving that district
   minKm: 4,                                     // ride mode only
+  districts: ['Kadıköy','Üsküdar'],             // ride mode only, optional: beat fires only on rides to these districts (engine default for ferhat)
   gate: (S, A) => true,                         // optional; A = META.arcs[arc]; if false the beat waits (due = tomorrow)
   hook: 'Hayri Abi oğlundan mektup geldi dedi, yarın okuyacak.',   // YARIN card sentence (≤ 90 chars)
   hookShort: "Hayri'nin mektubu",                // ≤ 24 chars, printed on the sleep button
@@ -80,6 +81,7 @@ ARC_BEATS.push({
   final: false                                  // true on the last beat of a branch; its effects may include keepsake/ending
 });
 ```
+Scheduling: the engine runs up to three beats per day, one per slot: main (ticket or ride), phone (morning bulletin) and knock (day end). A beat the player misses is deferred to the next day; a ticket beat deferred once fires on any order, a ride beat deferred twice fires on any ride. A new run resets every pending beat's due day so queued beats continue on day 1.
 Branching: read `A.flags` and `S.rating`, `hasFact()` inside build() to vary text and choices; use `gate` to delay.
 Each arc: 5–6 beats, ≤ 2 cards per beat (a beat may return `{title,text,choices}` where a choice's `result` is the
 second card). Payoffs must change the game (keepsake, unlockRestaurant, ending, rel-dependent later text).
@@ -116,7 +118,7 @@ const SPECIAL_DAYS = [
 ];
 const RULES = [   // one per Monday, in order
   { id:'foto', week:2, title:'Fotoğraflı Teslimat', body:'…platform voice…',
-    effect: { enableEvent:'foto_kat' } },
+    effect: { enableEvent:'foto_kat' } },   // enableEvent is informational: the event gates itself on S.rules.includes('foto')
   { id:'surge', week:3, title:'Dinamik Ücretlendirme', body:'…', effect:{ feeMult:0.95, surge:true } },
   { id:'kesinti', week:4, title:'Kurye Katkı Payı', body:'…', effect:{ cutPct:3 } },
   { id:'gece', week:5, title:'Gece Kotası', body:'…', effect:{ nightQuota:2 } },

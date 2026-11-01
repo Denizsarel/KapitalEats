@@ -24,7 +24,7 @@ const SPECIAL_DAYS = [
   { id:'derbi', name:'Derbi Gecesi', emoji:'⚽',
     announce: 'Derbi akşamı yaklaşıyor! ⚽ Maç saatinde bölgenizde talep rekor seviyeye çıkacak ve ücretler ×1,5 olarak güncellenecek. Derbi Gecesi hedefini tamamlayan iş ortaklarımızın geri bildirim arşivinden bir kayıt silinecek. Çevrim içi kalın, fırsatı birlikte yakalayalım! 🏆',
     morning: 'Bugün Derbi Gecesi! ⚽ Maç saatinde tribün yoğunluğu nedeniyle Kadıköy\'de stadyum çevresinde rota önerilerimizi takip edin, taraftar konvoylarında güvenli mesafenizi koruyun. Yağış bekleniyor; yağmurluğunuzu unutmayın. Kaskınız takılı, ekranınız açık, gol sizin! 🏟️',
-    effect: { weather:'rain', feeMult:1.5, eventChance:0.75, tags:['derby','night'] },
+    effect: { weather:'rain', feeMult:1.5, eventChance:0.6, tags:['derby','night'] },
     target: { deliveries:5, maxComplaints:1 },
     clearText: "Beşinci paketi maçın uzatmalarında teslim edersin; kornalar Bağdat Caddesi'nden Moda'ya kadar iner. Arşivden bir kayıt silinir, ekranda tek satır: 'Derbi Gecesi tamamlandı 🏆'.",
     failText: "Son düdükten sonra Bahariye'de bir korna bile susmaz, senin sayın tutmaz. Uygulama hedefi 'bir sonraki fırsata' taşır; kargo ekranında taksit tutarı yüzde beş yukarı oynar, altında küçük harf: 'Fiyat güncellendi.'" },

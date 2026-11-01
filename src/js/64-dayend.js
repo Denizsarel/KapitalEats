@@ -1,5 +1,6 @@
 /* ---------------- GÜN SONU ---------------- */
 function endDay(){
+  if(S.dayClosed){ renderDayEnd(); show('s-dayend'); return; }
   S.money -= S.dayExpense;
   if(S.task && S.task.done && S.task.reward){ S.money += S.task.reward; }
   if(S.debt > 0){ const pay = Math.min(S.debt, 170, Math.max(0, S.money)); S.debt -= pay; S.money -= pay; S.debtPaidToday = pay; } else S.debtPaidToday = 0;
@@ -10,7 +11,8 @@ function endDay(){
   // gece kotası
   const ruleFx = activeRuleEffects(); S.tomorrowFeeMult = (ruleFx.nightQuota && S.nightDeliveries < ruleFx.nightQuota) ? 0.9 : 1;
   // ark ertelemesi: bugün ateşlenmediyse yarına kalır
-  if(S.todayArc && !S.arcDone && S.todayArc.mode !== 'knock'){ const A = arcState(S.todayArc.arc); A.due = S.day + 1; A.defer++; }
+  if(S.todayArc && !S.arcDone){ const A = arcState(S.todayArc.arc); A.due = S.day + 1; A.defer++; }
+  if(S.todayPhone && !S.phoneDone){ arcState(S.todayPhone.arc).due = S.day + 1; }
   S.dayClosed = true;
   S.dayReviews = makeReviews(); S.serviceState = null;
   S.tomorrow = rollDay(S.day + 1);
@@ -32,13 +34,13 @@ function makeReserved(roll){
 function renderDayEnd(){
   // kutlama
   const net = S.lastNet || 0, prev = S.netHistory.length >= 2 ? S.netHistory[S.netHistory.length-2] : null;
-  const cmp = prev == null ? 'İlk gün defteri açıldı.' : (prev === 0 ? '' : `Dünden ${net >= prev ? '+' : ''}${Math.round((net - prev) / Math.max(1, Math.abs(prev)) * 100)}%`);
+  const cmp = prev == null ? 'İlk gün defteri açıldı.' : (prev === 0 ? '' : `Dünden ${net >= prev ? '+' : '−'}%${Math.abs(Math.round((net - prev) / Math.max(1, Math.abs(prev)) * 100))}`);
   let specialLine = '';
   if(S.special && S.special.day === S.day && typeof SPECIAL_DAYS !== 'undefined'){ const sp = SPECIAL_DAYS.find(x => x.id === S.special.id); if(sp) specialLine = `<div class="small" style="margin-top:4px;color:${S.special.cleared?'var(--good)':'var(--bad)'}">${esc(sp.emoji||'⭐')} ${esc(sp.name)}: ${esc(S.special.cleared ? sp.clearText : sp.failText)}</div>`; }
   $('de-celebrate').innerHTML = `<div class="small muted">GÜN ${S.day} · ${S.shiftEnded ? 'vardiya erken bitti' : 'vardiya bitti'}</div><div class="net" id="de-net">${fmt(0)}</div><div class="cmp">${esc(cmp)}</div>${S.isRecord ? '<div class="rec">REKOR GÜN</div>' : ''}${specialLine}${dayMomentHTML()}`;
   setTimeout(() => tweenNumber($('de-net'), 0, net, 900), 100);
   renderDaySummary(); renderTaksit(); renderKnock(); renderEnding(); renderService(); renderShop(); renderYarin(); renderHUD();
-  $('de-shopwrap').hidden = true; $('btn-toggle-shop').textContent = `Usta Cemil ve Dükkan${wear() >= 70 ? ' · 🔧 bakım gerekiyor' : ''}`;
+  $('de-shopwrap').hidden = true; $('btn-toggle-shop').textContent = `Cemil Usta ve Dükkan${wear() >= 70 ? ' · 🔧 bakım gerekiyor' : ''}`;
 }
 function dayMomentHTML(){
   const d = S.dayDeliveries; if(!d.length) return '';
@@ -77,10 +79,10 @@ function payTaksit(){
   if(S.taksitPaid >= CONFIG.taksitCount){ S.taksitPaidAmt = S.goalPrice; if(!EVENTS.some(e => e.id === 'kargo_ferhat')){ showWin(); return; } }
   renderDaySummary(); renderTaksit(); renderYarin(); renderHUD(); save();
 }
-function renderKnock(){ const host = $('de-knock'); host.innerHTML = ''; if(S.todayArc && S.todayArc.mode === 'knock' && !S.arcDone) renderArcCard('de-knock', 'knock'); }
+function renderKnock(){ const host = $('de-knock'); host.innerHTML = ''; if(S.todayKnock && !S.knockDone) renderArcCard('de-knock', 'knock', S.todayKnock); }
 function renderEnding(){
   const host = $('de-ending'); host.innerHTML = '';
-  if(S.endingAvailable === 'borek' && S.goalId && S.money >= S.goalPrice * 0.6){
+  if((S.endingAvailable === 'borek' || hasFact('nebahat_mutfak')) && !META.endings.includes('borek') && S.goalId && S.money >= S.goalPrice * 0.6){
     host.innerHTML = `<div class="card" style="border-color:var(--accent2)"><b>Bir başka son</b><p class="small muted" style="margin-top:4px">Nebahat Teyze'nin mutfağı açık, kasanda hedefin yarısından fazlası var. Hedefi bırakıp bu parayı mutfağa koyabilirsin. Story olmaz, beğeni olmaz.</p><button class="btn ghost" id="btn-borek" style="margin-top:8px">Börek Sonu</button></div>`;
     $('btn-borek').onclick = () => showEnding('borek');
   }
@@ -108,7 +110,7 @@ function renderService(){
     S.money -= price; S.kmSince = 0; Sfx.coin(); Haptic.coin();
     S.serviceState = { done:true, text: `Bakım yapıldı, ${fmt(price)}. Motor yeni gibi çalışıyor; Cemil Usta "bir dahakine erken gel" dedi, motora.` };
     S.log.unshift(`G${S.day} · Motor bakımı: ${fmt(price)}`);
-    renderService(); renderShop(); renderHUD(); renderDaySummary(); renderTaksit();
+    renderService(); renderShop(); renderHUD(); renderDaySummary(); renderTaksit(); save();
   };
 }
 function renderShop(){
@@ -128,7 +130,7 @@ function buy(id){
   const it = SHOP.find(x=>x.id===id); if(!it) return;
   if(!META.owned.includes(id)){ if(S.money < it.price) return; S.money -= it.price; META.owned.push(id); S.log.unshift(`G${S.day} · Satın alındı: ${it.name}`); Sfx.coin(); Haptic.coin(); }
   META.equipped[it.slot] = id;
-  renderAllAvatars(); renderHUD(); renderShop(); renderDaySummary(); renderTaksit(); saveMeta();
+  renderAllAvatars(); renderHUD(); renderShop(); renderDaySummary(); renderTaksit(); save();
 }
 /* YARIN kartı: hava sızıntısı, hikaye kancası, taksit mesafesi, ayrılmış sipariş */
 function tomorrowHook(){
@@ -138,8 +140,10 @@ function tomorrowHook(){
     // yarın hangisi ateşlenecekse onu söyle: scheduleArcs ile aynı sıra (erteleme, adım, vade)
     const due = cands.filter(c => c.due <= day).sort((x,y) => (y.defer - x.defer) || (x.b.step - y.b.step) || (x.due - y.due));
     if(due.length) return { hook: due[0].b.hook, short: due[0].b.hookShort, tomorrow:true };
+    if(S.special && S.special.day === day) return { hook:`${S.special.name} yarın.`, short:S.special.name };
+    if(wear() >= 70) return { hook:'Motor sabah ilk yokuşta öksürecek. Cemil Usta biliyor.', short:'Cemil Usta' };
     cands.sort((x,y) => (x.due - y.due));
-    if(cands.length) return { hook: `${cands[0].b.hook.replace(/\.$/, '')} · ${cands[0].due - S.day} gün sonra.`, short: cands[0].b.hookShort, tomorrow:false };
+    if(cands.length) return { hook: `${cands[0].b.hookShort} · ${cands[0].due - S.day} gün sonra.`, short: cands[0].b.hookShort, tomorrow:false };
   }
   if(S.special && S.special.day > S.day) return { hook:`${S.special.name} ${S.special.day - S.day === 1 ? 'yarın' : S.special.day - S.day + ' gün sonra'}.`, short:S.special.name };
   if(wear() >= 70) return { hook:'Motor sabah ilk yokuşta öksürecek. Cemil Usta biliyor.', short:'Cemil Usta' };
@@ -149,16 +153,18 @@ function renderYarin(){
   const t = S.tomorrow; if(!t){ $('de-yarin').innerHTML = ''; return; }
   const w = WEATHER[t.weather] || WEATHER.sunny; const n = NEWS.find(x => x.id === t.newsIds[0]);
   const leakOk = Math.random() < 0.8 || S.leakShown; S.leakShown = true; S.leakWrong = !leakOk;
-  const wxLine = leakOk ? `${w.emoji} ${w.name}${t.mods.feeMult !== 1 ? `, ücret ×${xfmt(t.mods.feeMult)}` : ''}${n ? ` · ${n.kicker.toLowerCase()}: ${n.headline}` : ''}` : `${pick(Object.values(WEATHER)).emoji} Meteoroloji "parçalı" dedi. Her şey olabilir.`;
+  const fakeW = pick(Object.values(WEATHER));
+  const wxLine = leakOk ? `${w.name}${t.mods.feeMult !== 1 ? `, ücret ×${xfmt(t.mods.feeMult)}` : ''}${n ? ` · ${trLower(n.kicker)}: ${n.headline}` : ''}` : `Meteoroloji "parçalı" dedi. Her şey olabilir.`;
+  const wxIcon = leakOk ? w.emoji : fakeW.emoji;
   const hook = tomorrowHook(); S.hookShort = hook.short;
   const size = taksitSize(); const need = size - S.money;
   const taksitLine = !S.goalId ? '' : S.taksitPaid >= CONFIG.taksitCount ? 'Kutu yolda.' : need <= 0 ? `${S.taksitPaid+1}. taksit hazır, ödemedin. Sabah yine burada.` : `${S.taksitPaid+1}. taksite ${fmt(need)}: ${Math.ceil(need / Math.max(300, avgNet())) <= 1 ? 'iyi bir günle bir gün' : Math.ceil(need / Math.max(300, avgNet())) + ' gün'}.`;
   const r = S.reserved;
   $('de-yarin').innerHTML = `<div class="hd">YARIN</div>
-    <div class="row"><span class="ic">${w.emoji}</span><span>${esc(wxLine)}</span></div>
+    <div class="row"><span class="ic">${wxIcon}</span><span>${esc(wxLine)}</span></div>
     <div class="row"><span class="ic">📍</span><span>${esc(hook.hook)}</span></div>
     ${taksitLine ? `<div class="row"><span class="ic">💳</span><span>${esc(taksitLine)}</span></div>` : ''}
-    ${r ? `<div class="row"><span class="ic">📦</span><div style="flex:1;display:grid;gap:6px"><div class="small">Sabah için ayrılmış sipariş <span class="muted">(ücret ×${CONFIG.reservedFeeMult})</span></div><div class="mini"><span>${esc(r.rest)} → ${esc(r.hood)}, ${r.km} km</span><b>${fmt(r.fee)}</b></div><label class="switch ${S.reserveOn?'on':''}" id="sw-reserve"><i></i>${S.reserveOn ? 'Al, sabah direkt yola çık' : 'Alma, sabah fişlere bak'}</label></div></div>` : ''}`;
+    ${r ? `<div class="row"><span class="ic">📦</span><div style="flex:1;display:grid;gap:6px"><div class="small">Sabah için ayrılmış sipariş <span class="muted">(ücret ×${xfmt(CONFIG.reservedFeeMult)})</span></div><div class="mini"><span>${esc(r.rest)} → ${esc(r.hood)}, ${r.km} km</span><b>${fmt(r.fee)}</b></div><label class="switch ${S.reserveOn?'on':''}" id="sw-reserve"><i></i>${S.reserveOn ? 'Al, sabah direkt yola çık' : 'Alma, sabah fişlere bak'}</label></div></div>` : ''}`;
   const sw = $('sw-reserve'); if(sw) sw.onclick = () => { S.reserveOn = !S.reserveOn; renderYarin(); save(); };
   $('btn-sleep').textContent = `Uyu → Yarın: ${hook.short}`;
 }
@@ -176,16 +182,17 @@ function showWeek(){
   else awards.push(['📋','Gelişime Açık',`${W.complaints} geri bildirim. Platform bunları "büyüme fırsatı" diye sınıflandırdı.`]);
   if(W.breaks === 0) awards.push(['🔥','Kesintisiz İş Ortağı','Yedi gün, sıfır mola. Verimlilik yüzde yüz; bel ayrı bir rapor.']);
   else awards.push(['☕','Mola Ustası',`${W.breaks} mola, her biri 40 ₺, her biri bir çay bardağı.`]);
-  if(W.tips > W.earned * 0.15) awards.push(['💸','Bahşiş Mıknatısı',`Bahşişler ücretin %${Math.round(W.tips/Math.max(1,W.earned)*100)}'i. İnsanlar ya seviyor ya acıyor; kasa farkı bilmiyor.`]);
+  if(W.tips > W.earned * 0.15) awards.push(['💸','Bahşiş Mıknatısı',`Bahşiş/ücret oranı %${Math.round(W.tips/Math.max(1,W.earned)*100)}. İnsanlar ya seviyor ya acıyor; kasa farkı bilmiyor.`]);
   else awards.push(['🪙','Nakit Yok Kurbanı',`Bahşiş ${fmt(W.tips)}. "Yarın veririm" diyenler bu hafta da gelmedi.`]);
   if(W.skips >= 3) awards.push(['🚫','Seçici',`${W.skips} tur geçildi. Algoritma not aldı, algoritma hep not alır.`]);
   if(W.best) awards.push(['⭐','Haftanın Teslimatı',`${W.best.customer}: ${fmt(W.best.total)}. Olay: "${W.best.title}".`]);
-  const youWon = W.specialCleared;
+  const youWon = W.specialCleared; const rivalName = hasFact('ferhat_quit') ? 'Kurtköylü Burak' : 'Hızlı Ferhat';
+  const old = $('programs'); if(old) old.remove();
   $('cert').innerHTML = `
     <div class="cert-head">HAFTANIN KURYESİ</div>
     <div class="cert-sub">${wk}. hafta · ${youWon ? 'resmi belge' : 'katılım sertifikası'}</div>
-    <div class="cert-name">${youWon ? esc(S.name || 'Sen') : 'Hızlı Ferhat'}</div>
-    <p class="small" style="margin-top:4px">${youWon ? `${esc(S.name)}, ${W.deliveries} teslimat ve temiz bir özel gün. Ferhat ${ferhat} teslimatla ikinci; sertifikayı kapıcı dairesinde asılı göreceksin.` : `Hızlı Ferhat, ${ferhat} teslimat. Sen ${W.deliveries}. Bu sertifika yine de senin; platform herkese basıyor.`}</p>
+    <div class="cert-name">${youWon ? esc(S.name || 'Sen') : rivalName}</div>
+    <p class="small" style="margin-top:4px">${youWon ? `${esc(S.name)}, ${W.deliveries} teslimat ve temiz bir özel gün. ${rivalName} ${ferhat} teslimatla ikinci; ${hasFact('kapitaldoor') ? 'sertifika çay ocağının duvarında asılı.' : 'sertifikayı kapıcı dairesinde asılı göreceksin.'}` : `${rivalName}, ${ferhat} teslimat. Sen ${W.deliveries}. Bu sertifika yine de senin; platform herkese basıyor.`}</p>
     <div class="summary" style="margin-top:10px">
       <span>Teslimat</span><span>${W.deliveries}</span>
       <span>Ücret</span><span>+${fmt(W.earned)}</span>

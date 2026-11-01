@@ -36,7 +36,7 @@ const RESTAURANTS = [
 ];
 const FIRST_NAMES = ['Ayşe','Mehmet','Zeynep','Burak','Elif','Can','Selin','Emre','Deniz','Merve','Kaan','Büşra','Serkan','Gamze','Onur','İrem','Tolga','Ceren','Barış','Pelin'];
 const SURNAME_INITIALS = ['K.','Y.','A.','D.','S.','Ö.','Ç.','T.','B.','G.'];
-const BUILDINGS = ['Apt.','Sitesi B Blok','Apt.','Rezidans','Apt.','Sitesi A Blok','Apt.'];
+const BUILDINGS = ['Çınar Apt.','Yasemin Apt.','Deniz Sitesi B Blok','Park Rezidans','Gül Apt.','Manolya Apt.','Zümrüt Sitesi A Blok','Huzur Apt.','Ihlamur Apt.','Mavi Rezidans','Ege Apt.','Sedef Apt.'];
 /* Notlar: key alanı hafıza olaylarının bağlanacağı anahtar (ör. 'knock' → "kaç kere çaldın?").
    Anahtarlar: nobell, leave, tiplater, guest (value = misafiri olunan isim), knock (value = vuruş sayısı).
    Aynı anahtardan birden çok not olabilir; motor zorunlu notta ilk eşleşeni alır. */

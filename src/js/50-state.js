@@ -12,7 +12,7 @@ function defaultMeta(){
     keepsakes:[], endings:[], runs:[],
     owned:['helmet_std','jacket_std','gloves_std','scooter_std','bag_std'],
     equipped:{ helmet:'helmet_std', jacket:'jacket_std', gloves:'gloves_std', scooter:'scooter_std', bag:'bag_std', side:null },
-    gifts:[], unlockedRestaurants:[], storyLog:[],
+    gifts:[], unlockedRestaurants:[], storyLog:[], name:'',
     ticketNo:48213, lastPlayDate:null, streakDays:0,
     metrics:{ sessions:0, maxDay:0, fired:0, wins:0, continues:0, newAccounts:0 }
   };
@@ -61,12 +61,13 @@ function migrate(o){
   }
   return s;
 }
-function save(){ if(!S.goalId && S.day === 1 && S.phase === 'start') return; S.lastSeen = Date.now(); try{ localStorage.setItem(CONFIG.saveKey, JSON.stringify(S)); }catch(e){} saveMeta(); }
+const runStarted = (o) => !!(o.goalId || o.day > 1 || o.orderIdx > 0 || o.current || o.name);
+function save(){ if(S.won || !runStarted(S)) { saveMeta(); return; } /* başlamamış koşu ve biten koşu kaydın üstüne yazmasın */ S.lastSeen = Date.now(); try{ localStorage.setItem(CONFIG.saveKey, JSON.stringify(S)); }catch(e){} saveMeta(); }
 function load(){
   try{
     let r = localStorage.getItem(CONFIG.saveKey);
     if(!r){ for(const k of CONFIG.legacySaveKeys){ r = localStorage.getItem(k); if(r) break; } }
-    if(r){ const o = JSON.parse(r); if(o && (o.goalId || o.day > 1 || o.phase !== 'start')) return migrate(o); }
+    if(r){ const o = JSON.parse(r); if(o && !o.won && runStarted(o)) return migrate(o); }
   }catch(e){}
   return null;
 }

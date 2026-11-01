@@ -12,10 +12,10 @@ function finishDelivery(){
   S.money += total; S.dayEarned += fee + c.extraMoney; S.dayTips += c.tip; S.dayFuel += o.fuel; S.dayCut += cut;
   if(isNight()) S.nightDeliveries++;
   // puan: olaysız teslimat küçük artı; ilk günler taban 3,0
-  if(!c.eventId && S.rating < CONFIG.ratingSoftCap) c.ratingDelta = (c.ratingDelta||0) + CONFIG.ratingRecover;
-  S.rating = clamp(S.rating + (c.ratingDelta||0), Math.max(S.day <= CONFIG.ratingFloorDays ? 3.0 : 1, (S.dayStartRating || 5) - 1), 5); // bir günde en fazla 1 puan düşer
+  if((!c.eventId || (c.ratingDelta||0) >= 0) && S.rating < CONFIG.ratingSoftCap) c.ratingDelta = (c.ratingDelta||0) + CONFIG.ratingRecover;
+  S.rating = clamp(S.rating + (c.ratingDelta||0), Math.max(S.day <= CONFIG.ratingFloorDays ? 3.0 : 1, (S.dayStartRating || 5) - CONFIG.maxDailyRatingDrop), 5); // bir günde en fazla maxDailyRatingDrop düşer
   if(c.eventId) S.cleanStreak = 0; else S.cleanStreak++;
-  S.dayDeliveries.push({ customer:o.customer, rest:o.rest, item:o.lines.slice().sort((x,y)=>y.price-x.price)[0].name, delta:c.ratingDelta||0, tip:c.tip, bad:!!c.bad, eventId:c.eventId||null, night:isNight(), floor:o.floor, noteKey:o.noteKey||null, voice:o.voice||null });
+  if(!o.story) S.dayDeliveries.push({ customer:o.customer, rest:o.rest, item:o.lines.slice().sort((x,y)=>y.price-x.price)[0].name, delta:c.ratingDelta||0, tip:c.tip, bad:!!c.bad, eventId:c.eventId||null, night:isNight(), floor:o.floor, noteKey:o.noteKey||null, voice:o.voice||null });
   rememberCustomer(o, c);
   S.kmSince += o.km;
   c.energyCost = energyCost(o); S.energy = clamp(S.energy - c.energyCost, 0, CONFIG.energyMax);
@@ -31,7 +31,7 @@ function finishDelivery(){
     ${c.extraMoney?`<span>${c.bonus?'Performans Bonusu':'Diğer'}</span><span>${c.extraMoney>0?'+':''}${fmt(c.extraMoney)}</span>`:''}
     <span>Benzin (${o.km} km)</span><span style="color:var(--bad)">−${fmt(o.fuel)}</span>
     <span>⚡ Enerji</span><span style="color:var(--bad)">−${c.energyCost}${c.energyGain?` <span style="color:var(--good)">+${c.energyGain}</span>`:''}</span>
-    <span>⭐ Puan</span><span>${S.rating.toFixed(2)}${arrow}</span>
+    <span>⭐ Puan</span><span>${xfmt(S.rating.toFixed(2))}${arrow}</span>
     <span class="tot">Toplam</span><span class="tot" style="color:${total>=0?'var(--good)':'var(--bad)'}">${total>=0?'+':''}${fmt(total)}</span>`;
   $('res-note').textContent = c.bonus ? `Performans Bonusu +${fmt(CONFIG.streakBonus)}: ${CONFIG.streakBonusAt} teslimat üst üste 🔥 Harika gidiyorsunuz!` : c.eventId ? '' : (c.tip ? pick(['Kapıda bahşiş. Fişin arkasına "teşekkürler" yazılmış, kalemle.','Bahşiş, poşetin içinde katlanmış. Saymadan cebe.','Müşteri "üstü kalsın" dedi; üstü 42 lira.']) : pick(['Bahşiş yok. Kapı kapandı, asansör aşağı.','Teslim edildi. Müşteri "tamam" dedi, bu kadar.','Paket el değiştirdi, kimse bir şey demedi.']));
   const t = S.task; $('res-task').hidden = !t; if(t) $('res-task').innerHTML = `<b>🎯 Görev</b><span>${esc(t.text)} · ${t.done ? 'tamamlandı ✓' : t.progress + '/' + t.target}</span>`;

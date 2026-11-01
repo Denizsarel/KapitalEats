@@ -22,7 +22,7 @@ const EVENTS = [
         effects: { tip: 60, rating: 0.2 } },
       { label: 'Paketi bahçeye at, kaç',
         result: 'Paket çakıla düşer, çorbanın kapağı açılır; Rex önce çorbaya, sonra sana bakar. Müşteri uygulamadan yazar: "Kurye paketi fırlattı, köpeğim mercimek içti, şu an uyuyor." Şikayet düşer, Rex uyur.',
-        effects: { tip: 0, rating: -0.5, complaint: true } }
+        effects: { tip: 0, rating: -0.3, complaint: true } }
     ]
   },
   {
@@ -61,9 +61,9 @@ const EVENTS = [
         choices: [
           { label: 'Siparişten biraz ye', outcomes: [
             { chance: 0.7, result: `Bir köşeye çeker, poşetin bandını açarsın: iki lokma ${food.toLocaleLowerCase('tr-TR')}, sonra üçüncü. Bandı yeniden yapıştırırsın; kapıda müşteri poşete değil telefonuna bakar: "Sağ olun, iyi akşamlar."`, effects: { energy: CONFIG.eatEnergy } },
-            { chance: 0.3, result: `İki lokma ${food.toLocaleLowerCase('tr-TR')}; bant eski yerine oturmaz. Kapıda müşteri poşeti tartar gibi kaldırır: "Bu açılmış. ${food} eksik." Şikayet, iade, kapanan kapı. Midende iki lokma; kapının ardında kilit sesi.`, effects: { energy: CONFIG.eatEnergy, complaint: true, rating: -0.6, feeLost: true } } ] },
+            { chance: 0.3, result: `İki lokma ${food.toLocaleLowerCase('tr-TR')}; bant eski yerine oturmaz. Kapıda müşteri poşeti tartar gibi kaldırır: "Bu açılmış. ${food} eksik." Şikayet, iade, kapanan kapı. Midende iki lokma; kapının ardında kilit sesi.`, effects: { energy: CONFIG.eatEnergy, complaint: true, rating: -0.2, feeLost: true } } ] },
           { label: 'Sonraki turu mola yap', result: 'Bu teslimattan sonra çay ocağı: ince belli bardak, iki şeker, bir simit. Bir tur gider; çay ocağının taburesi boş, bardak tabağında bekliyor.', effects: { breakNext: true } },
-          { label: 'Dişini sık, sür', result: 'Sürersin. Enerji aynı, benekler aynı; bundan sonra her kötü ihtimal zarına bir yüz daha ekler. Telefon yine titrer: "Siz bir efsanesiniz 💙"', effects: {} }
+          { label: 'Dişini sık, sür', result: 'Sürersin. Enerji aynı, benekler aynı; bundan sonra her kötü ihtimal zarına bir yüz daha ekler. Telefon yine titrer: "Siz bir efsanesiniz 💙"', effects: { energy: -5 } }
         ]
       };
     }
@@ -158,7 +158,7 @@ const EVENTS = [
       choices: memChoices(
         `${o.noteValue}${gen(o.noteValue)} misafiriyim`, ['Ahmet Bey','Nurten Hanım','Kemal Bey','Sevgi Hanım'].filter(x=>x!==o.noteValue).slice(0,2).map(x=>`${x}${gen(x)} misafiriyim`),
         { result:'Güvenlik telsize bile uzanmaz, bariyeri açar: "Buyrun, B Blok." Kuralın adı site kuralı; ismin adı anahtar. Asansörde ayna var, yüzünü görürsün, gülüyorsun.', effects:{ tipPct:0.1 } },
-        { result:'"Öyle biri yok burada." Bariyer inmez bile, çünkü hiç kalkmadı. Müşteri terlikle aşağı iner, paketi bariyerin üstünden alır: "Zahmet oldu bana." Güvenlik telsize konuşur: "Kurye çıkıyor."', effects:{ rating:-0.2, complaint:true } }
+        { result:'"Öyle biri yok burada." Bariyer inmez bile, çünkü hiç kalkmadı. Müşteri terlikle aşağı iner, paketi bariyerin üstünden alır: "Zahmet oldu bana." Güvenlik telsize konuşur: "Kurye çıkıyor."', effects:{ rating:-0.3 } }
       )
       };
     }
@@ -220,7 +220,7 @@ const EVENTS = [
     id: 'motor_ariza',
     title: 'MOTOR ÖKSÜRDÜ',
     stage: 'Yolda',
-    condition: (S) => wear() >= 50 && (wear() >= 100 || Math.random() < (wear()/100) * (wear()/100)),
+    condition: (S) => wear() >= 50 && (wear() >= 100 || Math.random() < Math.pow((wear()-50)/50, 2) * 0.4),
     priority: true,
     reviews: { bad:['Kurye motoru iterek geldi. Terli, geç, ama geldi. Yemek soğuktu, hikâye sıcaktı. ⭐⭐'] },
     build: (o, S) => ({
@@ -285,6 +285,7 @@ const EVENTS = [
     stage: 'Apartmanda',
     weight: 2,
     forbids: ['hayri_left', 'hayri_cold'],
+    condition: (S, o) => o.district === 'Kadıköy' && ((META.arcs.hayri || {}).step || 1) > 1,
     reviews: { good:["Kurye kapıcımızla çay içmiş, Hayri Abi 'iyi çocuk' dedi. Hayri Abi kolay kolay demez. ⭐⭐⭐⭐⭐"], bad:['Kurye kapıcımızla tartışmış, yönetim toplandı. Çorbam soğudu, gündem uzadı. ⭐⭐'] },
     build: (o, S) => {
       const stayed = hasFact('hayri_stayed'), panel = hasFact('kapitaldoor'), volkan = hasFact('volkan_ride');
@@ -335,6 +336,7 @@ const EVENTS = [
     stage: 'Apartmanda',
     weight: 1,
     forbids: ['nebahat_tasindi'],
+    condition: (S, o) => o.district === 'Üsküdar' && ((META.arcs.nebahat || {}).step || 1) > 1,
     reviews: { good:['Kurye komşumla merdivende börek yemiş, bana da bir dilim getirdi. Siparişim ılıktı, umrumda değil. ⭐⭐⭐⭐⭐'], bad:['Kurye komşumun kapısında on dakika sohbet etmiş. Komşum sever, ben beklemem. ⭐⭐'] },
     build: (o, S) => {
       const r = rel('nebahat');
@@ -430,7 +432,7 @@ const EVENTS = [
     stage: 'Yolda',
     priority: true,
     condition: (S) => S.complaints === 3 && !S.warnedToday,
-    text: `Telefon titrer, ekranda mavi bir kart: "Sayın İş Ortağımız, hesabınızda 3 adet doğrulanmış müşteri geri bildirimi bulunmaktadır. Topluluk Standartlarımız gereği 4. geri bildirimde hesabınız otomatik değerlendirmeye alınacaktır. Gelişim yolculuğunuzda yanınızdayız 💙 İtiraz hakkınız 24 saat geçerlidir."`,
+    text: `Telefon titrer, ekranda mavi bir kart: "Sayın İş Ortağımız, hesabınızda 3 adet doğrulanmış müşteri geri bildirimi bulunmaktadır. Topluluk Standartlarımız gereği ${CONFIG.maxComplaints}. geri bildirimde hesabınız otomatik değerlendirmeye alınacaktır. Gelişim yolculuğunuzda yanınızdayız 💙 İtiraz hakkınız 24 saat geçerlidir."`,
     choices: [
       { label: 'İtiraz et',
         result: `"İtiraz talebiniz alınmıştır. İlgili geri bildirim Güven ve Güvenlik ekibimizce yeniden değerlendirilmiştir; sonucunuz aşağıda görüntülenmektedir. Sabrınız için teşekkür ederiz 💙" Ekranın altında bir çubuk dolar, boşalır, yeniden dolar.`,
@@ -445,7 +447,7 @@ const EVENTS = [
     title: 'FOTOĞRAFLI TESLİMAT',
     stage: 'Kapıda',
     weight: 3,
-    condition: (S, o) => S.rules && S.rules.includes('foto') && o.noteKey === 'leave',
+    condition: (S, o) => S.rules && S.rules.includes('foto') && (o.noteKey === 'leave' || o.noteKey === 'nobell'),
     reviews: { good:['Kapıya bıraktı, fotoğrafı doğru kata yüklemiş, sistem bana da gönderdi. Temas yok, sorun yok. ⭐⭐⭐⭐⭐'], bad:['Kapıya bırakmış ama fotoğraf başka kat. Benim paspasım o değil. Hangi kat yedi acaba? ⭐'] },
     build: (o) => ({
       text: `Paketi paspasa bırakır, "temas istemiyorum" notuna uyup geri çekilirsin. Uygulama fotoğrafı ister, sonra bir soru daha: "Teslimat doğrulaması için paketi bıraktığınız katı seçin 📸" Merdivenler aynı, paspaslar aynı, kapı numaraları ışıkta okunmuyor. Paketi hangi kata bıraktın?`,
@@ -600,7 +602,7 @@ const EVENTS = [
     text: `Sağanak bastırır; köprünün altına çekersin. Beş kurye daha var: iki mavi çanta, bir turuncu, biri kasksız sigara içiyor, biri yağmurluk satıyor, 150 lira, "iki kat, kapüşonu bantlı". Ekranda yağmur damlası ve "Yoğunluk primi aktif ☔".`,
     choices: [
       { label: 'Yağmurluk al, sür', result: `Yüz elli lira, iki kat naylon, kapüşon bantlı. Giyersin, sürersin; dizlerin ıslanır, sırtın kuru kalır, çanta kuru kalır. Kapıda müşteri yağmurluğa bakar: "Yeni mi?" "Köprü altından." Paket sıcak, poşet kuru.`, effects: { money: -150, energy: 5 } },
-      { label: 'Dinmesini bekle', result: `Sigara içen anlatır: "Kuzguncuk'ta bir Nurten Hanım var, her yağmurda kapıda havlu uzatır, bir de kesme şeker." On iki dakika sonra sağanak çiseye döner; sürersin. Kapıda müşteri telefonu gösterir: "Yirmi dakika geç." Havlu yok.`, effects: { rating: -0.1, energy: 5 } },
+      { label: 'Dinmesini bekle', result: `Sigara içen anlatır: "Çengelköy'de bir Fatma Anne var, her yağmurda kapıda havlu uzatır, bir de kesme şeker." On iki dakika sonra sağanak çiseye döner; sürersin. Kapıda müşteri telefonu gösterir: "Yirmi dakika geç." Havlu yok.`, effects: { rating: -0.1, energy: 5 } },
       { label: 'Sağanakta sür', outcomes: [
         { chance: 0.6, result: `Köprüden çıkarsın; yağmur kaskın içine kadar girer, göremediğin yolu ezbere sürersin. Kapıya sayaçtan önce varırsın; paket poşetin içinde ikinci poşette, kuru. Müşteri bir havlu uzatır: "Al, kurulan, sonra ver."`, effects: { tipPct: 0.1, energy: -6 } },
         { chance: 0.4, result: `Köprüden çıkarsın; üçüncü ışıkta bir Egea su birikintisini sana doğru boşaltır. Kask, yaka, çorap, poşetin dışı, poşetin içi. Kapıda müşteri poşete bakar: "Bu ıslak." Islak; çorap da.`, effects: { rating: -0.2, energy: -10 } } ] }

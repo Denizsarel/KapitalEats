@@ -149,7 +149,7 @@
                 effects: { money: 1200, complaint: true, fact: 'musti_rival' } },
               { chance: 0.2,
                 result: `«kuzen bi geceyi platform iptal etti tek gece atıyorum 600 kalanı yok» 600 ₺ düşer. Uygulamada bir şikayet ve bir uyarı: «Hesabınızda olağan dışı giriş tespit edildi. İş Ortağı Sözleşmesi madde 9 hatırlatılır 🔒» Musti: «madde 9 ne kuzen»`,
-                effects: { money: 600, complaint: true, rating: -0.2, fact: 'musti_rival' } }
+                effects: { money: 600, complaint: true, fact: 'musti_rival' } }
             ] },
           { label: 'Parayı ona bırak',
             result: `«kuzen ciddi misin» «valla mı» «tamam ben de sana bi şey yapıcam bekle» Uygulamada üç gecenin özeti: 23 teslimat, şikayet yok, puan yerinde. Öğlen Talatpaşa yokuşunda sarı kasklı bir motor seni geçer, selesinde sıfır bir çanta, etiketi hâlâ üstünde.`,

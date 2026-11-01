@@ -22,7 +22,7 @@ const CONFIG = {
   streakBonus: 150,
   taksitCount: 4,           // hedef kaç taksitte alınır
   goalInflationCap: 1.3,    // hedef fiyatı başlangıcın en fazla bu katına çıkabilir
-  serviceKm: 200,           // bu kadar km'de aşınma %100 olur
+  serviceKm: 320,           // bu kadar km'de aşınma %100 olur
   serviceBase: 300,         // Usta Cemil taban fiyatı
   serviceWearPrice: 7,      // aşınma yüzdesi başına ₺
   towCost: 450,             // çekici
@@ -37,15 +37,16 @@ const CONFIG = {
   dailyExpense: 120,        // simit + çay + motor (gün sonu kesilir)
   breakCost: 40,            // mola: çay + simit
   energyMax: 100,
-  energyBase: 5,            // her teslimatın sabit enerji bedeli
-  energyPerKm: 1.0,
+  energyBase: 3,            // her teslimatın sabit enerji bedeli
+  energyPerKm: 0.8,
   energyPerFloor: 0.8,      // 3. kattan sonraki her kat (asansörsüz hesap)
   energyNight: 4,
-  energyLow: 30,            // bunun altında "enerji bitiyor" olayı çıkabilir
+  energyLow: 25,            // bunun altında "enerji bitiyor" olayı çıkabilir
   breakEnergy: 45,
   eatEnergy: 25,
   startRating: 4.6,
-  ratingRecover: 0.03,      // olaysız her teslimatta puan artışı (4,8'e kadar)
+  ratingRecover: 0.05,      // olaysız (ya da puan kaybettirmeyen) her teslimatta puan artışı (4,8'e kadar)
+  maxDailyRatingDrop: 0.7,  // bir günde en fazla bu kadar puan düşer
   ratingSoftCap: 4.8,
   ratingFloorDays: 3,       // ilk N gün puan 3,0'ın altına inmez, kimse kovulmaz
   fireRating: 2.0,

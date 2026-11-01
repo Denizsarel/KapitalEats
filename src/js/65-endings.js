@@ -43,7 +43,7 @@ function showWin(){
       <div class="story-cap muted"><b>musti_kuzen</b> kaç para</div>
     </div>
     <p class="twist">Tebrikler. Story'ni ${likes} kişi beğendi. Kazandın.</p>
-    <p><b>${esc(g.name)}</b> artık senin. ${S.day} gün, ${S.accepted} teslimat, ${S.account > 1 ? S.account + ' hesap, ' : ''}${rel('hayri')} kez Hayri Abi, ${rel('nebahat')} kez Nebahat Teyze.</p>
+    <p><b>${esc(g.name)}</b> artık senin. ${S.day} gün, ${S.accepted} teslimat${S.account > 1 ? ', ' + S.account + ' hesap' : ''}. ${rel('hayri') >= 3 ? 'Hayri Abi adını biliyor' : 'Hayri Abi seni gözüyle takip ediyor'}, ${rel('nebahat') >= 2 ? 'Nebahat Teyze böreği ayırıyor' : 'Nebahat Teyze kapıyı aralıyor'}.</p>
     <p class="muted small">Üç gün sonra "${esc(next)}" tanıtıldı. Seninki vitrinden "klasik" rafına indi.</p>
     <p class="muted small">Kasada ${fmt(S.money)} kaldı. Mahalle de yerinde: Hayri Abi, Nebahat Teyze, Ferhat. Yeni hedefte seni hatırlayacaklar.</p>`;
   bankRun('win');
@@ -63,7 +63,7 @@ function showEnding(kind){
       <div class="story-cap"><b>nebahatin_mutfagi</b> Açıldık. Kuzguncuk, İcadiye Cad. Kuryemiz var.</div>
     </div>
     <p class="twist">Story'ni kimse beğenmedi. Nebahat Teyze telefonu ters tutuyordu.</p>
-    <p>Hedefi bırakıp ${fmt(Math.round(S.goalPrice*0.6))} lirayı mutfağın tüpüne, fırınına ve ilk ay kirasına koydun. ${esc(S.name)}, artık tek bir restorana çalışıyorsun; ücret düşük, börek sıcak, Nusret'in fotoğrafı tezgahın üstünde.</p>
+    <p>Hedefi bırakıp ${Math.round(S.goalPrice*0.6).toLocaleString('tr-TR')} lirayı mutfağın tüpüne, fırınına ve ilk ay kirasına koydun. ${esc(S.name)}, artık tek bir restorana çalışıyorsun; ücret düşük, börek sıcak, Nusret'in fotoğrafı tezgahın üstünde.</p>
     <p class="muted small">${S.day} gün sürdü. ${goal() ? esc(goal().name) : 'Hedef'} vitrinde kaldı; üç gün sonra zamlandı, sen görmedin.</p>`;
   bankRun('borek');
   S.goalId = null; S.won = true;
@@ -84,7 +84,7 @@ function showFired(reason){
   $('btn-fired-musti').textContent = `Musti'nin kimliğiyle devam et${cost ? ` (−${fmt(cost)})` : ''}`;
   $('btn-fired-musti').disabled = false;
   S.goalIdBackup = S.goalId;
-  show('s-fired'); Sfx.buzz(); Haptic.bad();
+  show('s-fired'); save(); Sfx.buzz(); Haptic.bad();
 }
 function newAccount(){
   const cost = S.newAccountCost || 0;
@@ -94,7 +94,7 @@ function newAccount(){
   S.rating = CONFIG.startRating; S.complaints = 0; S.offered = 0; S.accepted = 0; S.cleanStreak = 0; S.newAccountDays = 3; S.lastComplaintDay = S.day;
   writeFact('yeni_hesap');
   // kalan turlar iptal; gün biter
-  S.shiftEnded = true; S.current = null;
+  S.shiftEnded = true; S.current = null; S.firedReason = null; rebaseArcs();
   saveMeta(); endDay();
 }
 function restart(){
