@@ -27,8 +27,9 @@ const SHOP = [
   { id:'scooter_gold', slot:'scooter', name:'Altın Kaplama', price:15000, color:'#e6b422', desc:'Hedefinin yarısı kadar. "Hedef" ne demekti?' },
   { id:'bag_std', slot:'bag', name:'Termal Çanta', price:0, color:'#2a2a2a', desc:'İçini sıcak tutmuyor, adını tutuyor.' },
   { id:'bag_pink', slot:'bag', name:'Pembe Çanta', price:1200, color:'#ff6fb5', desc:'Müşteriler fotoğraf çekiyor. Bahşiş vermiyor.' },
+  { id:'helmet_ferhat', slot:'helmet', name:'Ferhat\'ın Kaskı', price:0, color:'#111118', hidden:true, desc:'Siyah, çizik, içinde "F" yazıyor. Ferhat bıraktı, gitti.' },
   /* Yan gelir: oyun kapalıyken (çevrimdışı) saat başına kazandırır. slot:'side', idle:{perHour, cut}  cut: kesinti oranı (benzin, komisyon) */
-  { id:'side_cousin', slot:'side', name:'Kuzen Musti\'ye motor kirası', price:2500, color:'#8a6cff', idle:{perHour:70, cut:0.35}, desc:'Sen yokken motoru Musti sürer. Benzinini sen ödersin. Aile bu.' },
-  { id:'side_ads', slot:'side', name:'Motora reklam giydirmesi', price:6000, color:'#ffb347', idle:{perHour:140, cut:0.1}, desc:'Arkanda bir banka reklamı. Bankanın kuryesi değilsin ama öyle görünüyorsun.' }
+  { id:'side_cousin', slot:'side', name:'Kuzen Musti\'ye motor kirası', price:1200, color:'#8a6cff', idle:{perHour:70, cut:0.35}, desc:'Sen yokken motoru Musti sürer. Benzinini sen ödersin. Aile bu.' },
+  { id:'side_ads', slot:'side', name:'Motora reklam giydirmesi', price:2400, color:'#ffb347', idle:{perHour:140, cut:0.1}, desc:'Arkanda bir banka reklamı. Bankanın kuryesi değilsin ama öyle görünüyorsun.' }
 ];
 

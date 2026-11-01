@@ -1,10 +1,12 @@
+/* ---------------- EKRAN ---------------- */
+let returnScreen = 's-start';
 function show(id){
   document.querySelectorAll('.screen').forEach(s => s.hidden = (s.id !== id));
   $('hud').hidden = (id === 's-start');
   document.querySelector('main').scrollTop = 0;
-  if(id !== 's-away') S.phase = id; // ara ekran, kaldığın yeri ezmesin
+  if(!['s-away','s-mahalle'].includes(id)) S.phase = id; // ara ekranlar kaldığın yeri ezmesin
   save();
-  if(S.goalId) renderHUD(); // saat ve hava simgesi ekrana göre değişir
+  if(S.goalId || S.day > 1 || id !== 's-start') renderHUD();
 }
 
 function renderAvatar(el){
@@ -14,8 +16,8 @@ function renderAvatar(el){
       .map(c=>`<div class="${c}"></div>`).join('');
   }
   let nohelmet = false, shape = '';
-  for(const slot in S.equipped){
-    const it = SHOP.find(x=>x.id===S.equipped[slot]);
+  for(const slot in META.equipped){
+    const it = SHOP.find(x=>x.id===META.equipped[slot]);
     if(!it || slot === 'side') continue;
     el.style.setProperty('--'+slot, it.color);
     if(it.nohelmet) nohelmet = true;
@@ -26,26 +28,77 @@ function renderAvatar(el){
 }
 function renderAllAvatars(){ ['hud-avatar','start-avatar','ride-avatar','shop-avatar','win-avatar','fired-avatar'].forEach(id=>{ const h = $(id); if(h){ h.classList.add('avatar'); renderAvatar(h); } }); }
 
+function inShift(){ return !['s-news','s-dayend','s-start','s-week','s-goal'].includes(S.phase) && S.orderIdx < S.dayRounds; }
 function renderHUD(){
-  const inShift = S.goalId && !['s-news','s-dayend','s-start'].includes(S.phase) && S.orderIdx < CONFIG.ordersPerDay;
-  $('hud-day').textContent = 'GÜN ' + S.day + (inShift ? ' · ' + hourStr() : '') + ' ' + (inShift && isNight() ? '🌙' : wx().emoji);
-  $('hud-money').textContent = fmt(S.money);
+  const sh = inShift();
+  $('hud-day').textContent = sh ? `G${S.day} · ${hourStr()} ${isNight() ? '🌙' : wx().emoji}` : `GÜN ${S.day} ${wx().emoji}`;
+  if(shownMoney == null){ $('hud-money').textContent = fmt(S.money); shownMoney = S.money; } else if(shownMoney !== S.money) moneyChanged();
   $('hud-rating').textContent = S.rating.toFixed(1);
-  $('hud-accept').textContent = Math.round(acceptRate()*100) + '%';
-  const w = wear(); $('hud-wear').textContent = w + '%'; $('hud-wear').style.color = w >= 80 ? 'var(--bad)' : (w >= 50 ? 'var(--accent2)' : 'var(--fg)');
+  const ar = acceptRate(); $('hud-accept-wrap').hidden = !(S.offered >= 4 && ar < 0.75); $('hud-accept').textContent = Math.round(ar*100) + '%';
+  const w = wear(); $('hud-wear-wrap').hidden = w <= 50; $('hud-wear').textContent = w + '%'; $('hud-wear').style.color = w >= 80 ? 'var(--bad)' : 'var(--accent2)';
+  $('hud-complaints').hidden = S.complaints < 2; $('hud-complaints-n').textContent = S.complaints;
+  $('hud-account').hidden = S.account < 2; $('hud-account-n').textContent = 'Hesap ' + S.account;
   $('btn-sound').textContent = Sfx.on ? '🔊' : '🔇';
+  $('btn-haptic').textContent = Haptic.on ? '📳' : '📴';
   const en = clamp(S.energy, 0, CONFIG.energyMax);
   $('hud-energy-txt').textContent = en;
   $('hud-energy').style.width = en + '%';
   $('hud-energy').style.background = en < 30 ? 'var(--bad)' : (en < 60 ? 'var(--accent2)' : 'var(--good)');
-  $('hud-tariff').textContent = (S.goalId && !['s-news','s-dayend','s-start'].includes(S.phase) && S.orderIdx < CONFIG.ordersPerDay && isNight()) ? `🌙 Gece tarifesi ×${CONFIG.nightFeeMult}` : (isWeekend() ? '🎉 Hafta sonu' : '');
+  $('hud-energy').classList.toggle('pulse', en < 30);
+  let tariff = '';
+  if(sh && isNight()) tariff = `🌙 Gece tarifesi ×${CONFIG.nightFeeMult}`;
+  else if(S.special && S.special.day === S.day) tariff = `${S.special.emoji||'⭐'} ${S.special.name}`;
+  else if(S.special && S.special.day > S.day) tariff = `${S.special.emoji||'⭐'} ${S.special.name}: ${S.special.day - S.day} gün`;
+  else if(isWeekend()) tariff = '🎉 Hafta sonu';
+  $('hud-tariff').textContent = tariff;
   const g = goal();
+  $('hud-goalbar').hidden = !g;
   if(g){
     $('hud-goalname').textContent = g.emoji + ' ' + g.name;
     $('hud-goalprice').textContent = fmt(S.goalPrice);
-    $('hud-bar').style.width = clamp(S.money / S.goalPrice * 100, 0, 100) + '%';
+    const paid = S.taksitPaidAmt, toward = Math.min(S.goalPrice, paid + Math.max(0, S.money));
+    $('hud-bar').style.width = clamp(toward / Math.max(1,S.goalPrice) * 100, 0, 100) + '%';
+    $('hud-taksit').textContent = `${S.taksitPaid}/${CONFIG.taksitCount} taksit · ${TAKSIT_STATUS[S.taksitPaid]}`;
+    $('hud-keepsakes').innerHTML = META.keepsakes.map(k => `<span class="keep" title="${esc(KEEPSAKE_INFO[k]||'')}">${esc(KEEPSAKE_NAME[k]||k)}</span>`).join('');
   }
   renderAvatar($('hud-avatar'));
 }
 function flashPrice(up){ const el = $('hud-goalprice'); el.classList.remove('flash-up','flash-down'); void el.offsetWidth; el.classList.add(up?'flash-up':'flash-down'); }
 
+const KEEPSAKE_NAME = { hayri_key:"Hayri'nin Anahtarı", hayri_glass:"Hayri'nin Bardağı", nebahat_bag:"Nebahat'in Poşeti", ferhat_alley:"Ferhat'ın Arka Sokağı", nuri_word:"Nuri'nin Sözü", musti_id:"Musti'nin Kimliği" };
+const KEEPSAKE_INFO = { hayri_key:'4. kat ve üstü yarı enerji', hayri_glass:'Molalar +10 enerji', nebahat_bag:'Güne +10 enerji', ferhat_alley:'Kadıköy ve Üsküdar 1 km kısa', nuri_word:'Günlük gider −40 ₺', musti_id:'Yeni hesap bedava' };
+const CHAR_NAME = { hayri:'Hayri Abi', nebahat:'Nebahat Teyze', ferhat:'Hızlı Ferhat', musti:'Kuzen Musti', nuri:'Nuri Bey' };
+const CHAR_ROLE = { hayri:'Yıldız Apt. kapıcısı, Moda', nebahat:'komşu, Kuzguncuk', ferhat:'rakip kurye', musti:'kuzen, telefonda', nuri:'ev sahibi, Gültepe' };
+const ENDING_NAME = { aldin:'Aldın', borek:'Börek Sonu', yeni_hesap:'Kovuldun ama durmadın' };
+
+/* Mahalle defteri: karakterler, olgular, hatıralar, geçmiş koşular. Salt okunur. */
+function renderMahalle(){
+  const arcsDefined = (typeof ARC_BEATS !== 'undefined') ? ARC_BEATS : [];
+  const chars = Object.keys(CHAR_NAME).map(k => {
+    const r = clamp(rel(k), 0, 5), A = META.arcs[k];
+    const beat = A && !A.done ? arcsDefined.find(b => b.arc === k && b.step === A.step) : null;
+    const thread = A ? (A.done ? 'Hikaye tamamlandı.' : (beat ? (A.due && A.due > S.day ? `${beat.hook} (${A.due - S.day} gün)` : beat.hook) : 'Bekliyor.')) : 'Henüz tanışmadınız.';
+    return `<div class="card mcard"><div><div class="dots">${[0,1,2,3,4].map(i=>`<i class="${i<r?'on':''}"></i>`).join('')}</div></div><div><div class="nm">${CHAR_NAME[k]}</div><div class="small muted">${CHAR_ROLE[k]}</div><div class="small" style="margin-top:4px">${esc(thread)}</div></div></div>`;
+  }).join('');
+  const facts = Object.keys(META.facts);
+  const keeps = META.keepsakes.map(k => `<span class="keep">${KEEPSAKE_NAME[k]||k}</span>`).join('') || '<span class="muted small">Henüz yok.</span>';
+  const runs = META.runs.slice(-10).reverse().map(r => `<div class="small">${r.result === 'win' ? '🏁' : r.result === 'borek' ? '🫓' : '⛔'} ${esc(r.goal)} · ${r.days} gün · ${r.result === 'win' ? 'alındı' : r.result === 'borek' ? 'börek sonu' : 'hesap kapandı'}</div>`).join('') || '<span class="muted small">İlk koşu.</span>';
+  $('mahalle-body').innerHTML = chars +
+    `<div class="card"><b>Mahallenin hatırladıkları</b><div class="small muted" style="margin-top:4px">${facts.length ? facts.map(f => esc(FACT_TEXT[f] || f)).join(' · ') : 'Henüz bir şey olmadı. Olacak.'}</div></div>
+     <div class="card"><b>Hatıralar</b><div style="margin-top:6px">${keeps}</div></div>
+     <div class="card"><b>Geçmiş koşular</b><div style="display:grid;gap:4px;margin-top:6px">${runs}</div><div class="small muted" style="margin-top:6px">Sonlar: ${META.endings.length}/3 ${META.endings.map(e=>ENDING_NAME[e]||e).join(', ')}</div></div>`;
+}
+const FACT_TEXT = { rex_fed:'Rex seni tanıyor.', rex_soup:'Rex çorba içti.', stairs_purple:'Merdiven mor oldu.', ate_from_order:'Paketten yedin.', ferhat_saved:'Ferhat\'ı yolda bıraktın mı? Bırakmadın.', ferhat_grudge:'Ferhat\'ı yolda bıraktın.', nebahat_money:'Nebahat Teyze para verdi.', hayri_tea:'Hayri Abi\'yle çay içtin.', boykot:'Boykot gününde kontak kapattın.', grev_kirici:'Boykot gününde çalıştın.' };
+function openMahalle(){ returnScreen = S.phase; renderMahalle(); show('s-mahalle'); }
+
+/* Hedef seçimi: platform reklamı gibi */
+function renderGoals(){
+  const estimate = p => Math.max(1, Math.ceil(p / Math.max(600, avgNet())));
+  $('goals').innerHTML = GOALS.map(g => `
+    <button class="goal ${selectedGoal===g.id?'sel':''}" data-id="${g.id}">
+      <div class="emoji">${g.emoji}</div>
+      <div><div>${esc(g.name)}${g.id==='termos'?'<span class="rec">Platform tavsiyesi</span>':''}</div><div class="desc">${esc(g.desc)}</div><div class="eta">~${estimate(g.price)} gün · 4 taksit × ${fmt(g.price/4)}</div></div>
+      <div class="price">${fmt(g.price)}</div>
+    </button>`).join('');
+  $('goals').querySelectorAll('.goal').forEach(b => b.onclick = () => { selectedGoal = b.dataset.id; renderGoals(); $('btn-goal-go').disabled = false; Sfx.click(); });
+}

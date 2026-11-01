@@ -1,5 +1,5 @@
-/* ---------------- SES (WebAudio, dosyasız) ----------------
-   Tüm sesler sentez: damga, bildirim, bozuk para, hata, motor. HUD'daki 🔊 ile açılır kapanır. */
+/* ---------------- SES (WebAudio, dosyasız) ve TİTREŞİM ----------------
+   Tüm sesler sentez: damga, bildirim, bozuk para, hata, motor. HUD'daki 🔊 / 📳 ile açılır kapanır. */
 const Sfx = {
   ctx:null, on:true, engineNodes:null,
   load(){ try{ this.on = localStorage.getItem(CONFIG.soundKey) !== 'off'; }catch(e){} },
@@ -21,9 +21,10 @@ const Sfx = {
   },
   stamp(){ this.noise(0.12, 0.35); this.tone(90, 0.18, 'square', 0.12, 0, 45); },
   ding(){ this.tone(880, 0.12, 'sine', 0.07); this.tone(1320, 0.18, 'sine', 0.06, 0.1); },
-  coin(){ this.tone(988, 0.08, 'square', 0.05); this.tone(1319, 0.16, 'square', 0.05, 0.08); },
+  coin(pitch=1){ this.tone(988*pitch, 0.08, 'square', 0.05); this.tone(1319*pitch, 0.16, 'square', 0.05, 0.08); },
   buzz(){ this.tone(140, 0.28, 'sawtooth', 0.09, 0, 70); },
   tada(){ [523,659,784,1047].forEach((f,i)=>this.tone(f, 0.18, 'triangle', 0.07, i*0.09)); },
+  task(){ [660,880,1100].forEach((f,i)=>this.tone(f, 0.1, 'triangle', 0.06, i*0.07)); },
   click(){ this.tone(600, 0.04, 'square', 0.03); },
   engineStart(){
     const c = this.ready(); if(!c || this.engineNodes) return;
@@ -37,3 +38,12 @@ const Sfx = {
 Sfx.load();
 document.addEventListener('pointerdown', () => { if(Sfx.on) Sfx.init(); }, { once:true });
 
+/* Titreşim: navigator.vibrate varsa. Desenler ms cinsinden. */
+const Haptic = {
+  on:true,
+  load(){ try{ this.on = localStorage.getItem(CONFIG.hapticKey) !== 'off'; }catch(e){} },
+  toggle(){ this.on = !this.on; try{ localStorage.setItem(CONFIG.hapticKey, this.on?'on':'off'); }catch(e){} if(this.on) this.buzz(30); return this.on; },
+  buzz(p){ if(!this.on || !navigator.vibrate) return; try{ navigator.vibrate(p); }catch(e){} },
+  stamp(){ this.buzz(30); }, coin(){ this.buzz(10); }, bad(){ this.buzz([40,30,40]); }, task(){ this.buzz([15,30,60]); }, big(){ this.buzz([20,40,20,40,80]); }
+};
+Haptic.load();

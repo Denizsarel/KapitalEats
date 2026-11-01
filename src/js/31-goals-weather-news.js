@@ -68,7 +68,7 @@ const NEWS = [
     cat:'all', effect:{ feeMult:1.25, tipMult:0.7 } },
   { id:'yerli', kicker:'TEKNOLOJİ', headline:'"Yerli ve milli telefon" tanıtıldı', body:'Fiyatı ithal olandan pahalı. Bakan: "Gurur fiyata dahil." Hedefindeki ithal telefon da "dayanışma" adına zamlandı.',
     cat:'tech', effect:{ priceMult:1.06 } },
-  { id:'quiet', kicker:'GÜNDEM', headline:'Bugün hiçbir şey olmadı', body:'Gazeteler boş sayfa bastı. Fiyatlar yerinde. Şüpheli bir sakinlik.',
-    cat:'all', effect:{} }
+  { id:'quiet', kicker:'GÜNDEM', headline:'Bugün hiçbir şey olmadı', body:'Gazeteler boş sayfa bastı. Fiyatlar yerinde, köpekler uyuyor, güvenlik kulübesi boş. Şüpheli bir sakinlik.',
+    cat:'all', effect:{ eventChance:0 } }
 ];
 

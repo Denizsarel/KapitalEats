@@ -23,7 +23,7 @@ only reference other data by name inside functions (build/make/test), never at t
 
 The lead guarantees these globals exist before your file runs: `CONFIG`, `GOALS`, `WEATHER`, `NEWS`,
 `RESTAURANTS`, `DISTRICTS`, `NOTES`, `FIRST_NAMES`, `SURNAME_INITIALS`, `BUILDINGS`, `PLATFORM_MSGS`, `INNER_VOICE`,
-`REVIEWS`, `EVENTS`, `SHOP`, and (declared in 42-arcs.js, before your arc file) `const ARC_BEATS = []`.
+`REVIEWS`, `EVENTS`, `SHOP`, and (declared in 42-arcs-00-base.js, before your arc file) `const ARC_BEATS = []`.
 Helpers available inside functions at runtime: `pick, rint, rnd, fmt, clamp, shuffle, memChoices, decoyNums,
 decoyNames, wear, isNight, isWeekend, curHour, wx, fact(key), hasFact(key), rel(name)` and the state `S` and `META`.
 

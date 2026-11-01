@@ -1,56 +1,80 @@
 /* ---------------- OLAY BAĞLAMA ---------------- */
 $('btn-start').onclick = startGame;
+$('btn-goal-go').onclick = () => { if(selectedGoal) chooseGoal(selectedGoal); };
 $('btn-news-go').onclick = () => { nextOrder(); };
-$('btn-ev-next').onclick = () => { if(S.current.skip){ S.rating = clamp(S.rating + S.current.ratingDelta,1,5); S.money += S.current.extraMoney + S.current.tip - S.current.order.fuel; S.dayFuel += S.current.order.fuel; S.orderIdx++; renderHUD(); if(!checkWin() && !checkFired()) nextOrder(); } else finishDelivery(); };
-$('btn-res-next').onclick = nextOrder;
+$('btn-ev-next').onclick = () => {
+  if(S.boxDelivered && currentEvent && currentEvent.id === 'kargo_ferhat'){ finishDelivery(); return; }
+  if(S.current && S.current.skip){ S.rating = clamp(S.rating + (S.current.ratingDelta||0),1,5); S.money += S.current.extraMoney + S.current.tip - S.current.order.fuel; S.dayFuel += S.current.order.fuel; S.orderIdx++; renderHUD(); if(!checkFired()) nextOrder(); }
+  else finishDelivery();
+};
+$('btn-res-next').onclick = () => { if(S.boxDelivered){ showWin(); return; } nextOrder(); };
 $('btn-sleep').onclick = sleep;
 $('btn-again').onclick = restart;
-$('btn-fired-again').onclick = restart;
-$('btn-continue').onclick = () => { const o = load(); if(!o) return; S = Object.assign(defaultState(), o); renderAllAvatars(); renderHUD(); showAway(); };
+$('btn-fired-musti').onclick = newAccount;
+$('btn-fired-quit').onclick = () => { bankRun('fired'); clearSave(); restart(); };
+$('btn-continue').onclick = () => { const o = load(); if(!o) return; S = o; META.metrics.continues++; renderAllAvatars(); shownMoney = null; renderHUD(); showAway(); };
 $('btn-away-go').onclick = resume;
 $('btn-skip').onclick = skipRound;
+$('btn-endshift').onclick = endShift;
+$('btn-toggle-shop').onclick = () => { const w = $('de-shopwrap'); w.hidden = !w.hidden; if(!w.hidden) w.scrollIntoView({ behavior:'smooth', block:'start' }); };
+$('btn-haptic').onclick = (e) => { e.stopPropagation(); Haptic.toggle(); renderHUD(); };
+$('btn-week-go').onclick = () => { S.week = defaultState().week; S.day++; S.dayClosed = false; S.leakShown = false; startDay(); };
+$('btn-sound').onclick = (e) => { e.stopPropagation(); Sfx.toggle(); renderHUD(); };
+$('hud-day').onclick = openMahalle;
+$('btn-mahalle-start').onclick = () => { returnScreen = 's-start'; renderMahalle(); show('s-mahalle'); };
+$('btn-mahalle-back').onclick = () => { const back = returnScreen || 's-start'; returnScreen = null; document.querySelectorAll('.screen').forEach(s => s.hidden = (s.id !== back)); $('hud').hidden = (back === 's-start'); };
+$('scene').onclick = () => { if(S.phase === 's-ride' && performance.now() - rideStarted >= CONFIG.rideSkipAfterMs) arrive(); };
+$('ride-text').onclick = $('scene').onclick;
 
-/* Çevrimdışı gelir: son kayıttan bu yana geçen saat × yan gelir. Yan gelir yoksa 0 ₺ ve bir espri. */
+/* Kaldığın yer: açık hikayeler, hava, sonra çevrimdışı gelir */
 function showAway(){
   const hours = Math.min(CONFIG.idleCapHours, Math.max(0, (Date.now() - (S.lastSeen||Date.now())) / 3600000));
-  if(hours < 0.1) return resume();
-  const side = SHOP.find(x => x.id === S.equipped.side);
+  const side = SHOP.find(x => x.id === META.equipped.side);
   const h = hours.toFixed(1).replace('.',',');
-  let html;
-  if(side){
-    const gross = Math.round(side.idle.perHour * hours), cut = Math.round(gross * side.idle.cut), net = gross - cut;
-    S.money += net;
-    html = `<p><b>${h} saat</b> yoktun. ${side.name} çalıştı.</p>
-      <div class="summary"><span>Kazanç</span><span>+${fmt(gross)}</span><span>Kesinti (benzin, komisyon, "işletme gideri")</span><span style="color:var(--bad)">−${fmt(cut)}</span><span class="tot">Hesabına geçen</span><span class="tot" style="color:var(--good)">+${fmt(net)}</span></div>
-      <p class="muted small">Hesap ${hours >= CONFIG.idleCapHours ? 'sadece 8 saat için işledi. Sonrası "sistem bakımı".' : 'dakikası dakikasına işledi. Bu sefer.'}</p>`;
-  } else {
-    html = `<p><b>${h} saat</b> yoktun. Hesabına geçen: <b>0 ₺</b>.</p>
-      <p class="muted">Kapitalizm uyumaz ama sen uyudun. Dükkanda "Yan gelir" eşyaları var: motor sen yokken de çalışabilir.</p>`;
+  const hook = tomorrowHook();
+  let html = `<p><b>Gün ${S.day}</b> · ${wx().emoji} ${wx().name}${S.goalId ? ` · ${goal().emoji} ${S.taksitPaid}/${CONFIG.taksitCount} taksit` : ''}</p><p class="small">${esc(hook.hook)}</p>`;
+  if(hours >= 0.25){
+    if(side){
+      const gross = Math.round(side.idle.perHour * hours), cut = Math.round(gross * side.idle.cut), net = gross - cut;
+      S.money += net;
+      html += `<div class="summary" style="margin-top:8px"><span>${esc(side.name)} · ${h} saat</span><span>+${fmt(gross)}</span><span>Kesinti (benzin, komisyon)</span><span style="color:var(--bad)">−${fmt(cut)}</span><span class="tot">Hesabına geçen</span><span class="tot" style="color:var(--good)">+${fmt(net)}</span></div>`;
+    } else {
+      S.energy = clamp(S.energy + 10, 0, CONFIG.energyMax);
+      html += `<p class="small muted" style="margin-top:8px">${h} saat yoktun. Nebahat Teyze kapıya folyoda börek bırakmış, üstünde "ısıt" yazıyor. +10 enerji.</p>`;
+    }
   }
   $('away-card').innerHTML = html;
   renderHUD(); show('s-away');
 }
-
 function resume(){
-  // Kaldığı yere göre devam: sürüş/olay ortasındaysa siparişi yeniden göster.
   if(S.phase === 's-week') { showWeek(); }
-  else if(S.dayClosed) { renderDaySummary(); renderService(); renderShop(); renderHUD(); show('s-dayend'); }
-  else if(S.phase === 's-news') { show('s-news'); }
-  else if(S.orderIdx >= CONFIG.ordersPerDay) { endDay(); }
+  else if(S.won || (!S.goalId && S.day > 1)) { restart(); }
+  else if(S.dayClosed) { renderDayEnd(); show('s-dayend'); }
+  else if(S.phase === 's-news') { const roll = S.tomorrow && S.tomorrow.day === S.day ? S.tomorrow : null; renderBulletin(roll || rollDay(S.day), ''); show('s-news'); }
+  else if(S.phase === 's-goal' || (S.day === 1 && S.orderIdx === 1 && !S.goalId)) { selectedGoal = null; renderGoals(); $('btn-goal-go').disabled = true; show('s-goal'); }
+  else if(S.orderIdx >= S.dayRounds) { endDay(); }
   else { nextOrder(); }
 }
-
+function renderStart(){
+  const saved = load();
+  $('btn-continue').hidden = !saved;
+  $('btn-start').textContent = saved ? 'Yeni koşu başlat' : 'Mesaiye Başla';
+  $('btn-start').classList.toggle('primary', !saved); $('btn-start').classList.toggle('ghost', !!saved);
+  const runs = META.runs.length;
+  $('start-meta').textContent = runs ? `${runs} koşu · sonlar ${META.endings.length}/3 · Hayri Abi ${rel('hayri')} kez, Nebahat Teyze ${rel('nebahat')} kez` : '';
+  $('btn-mahalle-start').hidden = !(runs || Object.keys(META.facts).length);
+  if(saved) $('start-card').querySelector('p').textContent = `Gün ${saved.day}${saved.goalId ? `, ${(GOALS.find(g=>g.id===saved.goalId)||{}).name || ''}` : ''}. Kaldığın yerde Hayri Abi, Nebahat Teyze ve bir fiş bekliyor.`;
+}
 /* ---------------- BOOT ---------------- */
 function boot(data){
-  renderGoals(); renderAllAvatars();
-  $('name-input').placeholder = pick(COURIER_NAMES) + ' (boş bırakırsan biz seçeriz)';
-  if(data && data.goalId){ S = Object.assign(defaultState(), data); renderAllAvatars(); renderHUD(); resume(); return; }
-  // Eski sürüm kaydı varsa görmezden gel (yapı değişti)
-  const saved = load();
-  if(saved){ $('btn-continue').hidden = false; }
+  loadMeta();
+  (META.unlockedRestaurants || []).forEach(r => { if(!RESTAURANTS.some(x => x.name === r.name)) RESTAURANTS.push(r); });
+  renderAllAvatars();
+  if(data && (data.goalId || data.day > 1)){ S = migrate(data); renderAllAvatars(); renderHUD(); resume(); return; }
+  renderStart();
   show('s-start');
+  if(location.protocol.startsWith('http') && 'serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js').catch(()=>{}); }catch(e){} }
 }
 const hot = window.claude && window.claude.hot;
 if(hot && hot.snapshot){ try{ hot.snapshot(() => S); }catch(e){} }
 if(hot && hot.ready){ hot.ready(boot); } else { boot(hot && hot.data); }
-
