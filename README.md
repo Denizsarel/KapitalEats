@@ -22,6 +22,14 @@ node tools/playtest.js --days 3 --policy random   # headless oyun testi (Playwri
 - `31-goals-weather-news.js` hedefler, hava, haberler
 - `32-orders-data.js` restoranlar ve menüler, ilçeler ve sokaklar, müşteri notları, platform bildirimleri
 - `33-voice-reviews.js` iç ses, müşteri yorumları
-- `40-events.js` olaylar (şema dosyanın başında açıklanır), `70-templates.js` boş şablonlar
+- `40-events.js` olaylar, `70-templates.js` boş şablonlar
 - `41-shop.js` kozmetikler ve yan gelir
-- `50-…`–`66-…` durum, ses, yardımcılar, ekran akışı
+- `42-arcs-*.js` karakter hikayeleri (Hayri Abi, Nebahat Teyze, Ferhat, Musti, Nuri Bey)
+- `43-tasks.js` günün görevleri, `44-special-rules.js` özel günler, kurallar, programlar
+- `50-…`–`66-…` durum (S ve kalıcı META), ses ve titreşim, yardımcılar, ekran akışı
+
+Belgeler: `docs/DESIGN.md` (oyun döngüsü ve sistemler), `docs/CONTENT_CONTRACT.md` (içerik şemaları, karakter ağızları, yazım kuralları).
+
+```
+node tools/validate-content.js   # içerik şemalarını ve yazım istatistiklerini denetler
+```
