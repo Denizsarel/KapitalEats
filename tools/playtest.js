@@ -25,6 +25,7 @@ const log = (...a) => { if (args.verbose) console.log(...a); };
     if (await visible('#s-week')) { await p.click('#btn-week-go'); continue; }
     if (await visible('#s-goal')) { await p.click(`.goal[data-id="${GOAL}"]`); await p.click('#btn-goal-go'); continue; }
     if (await visible('#s-news')) {
+      if (await p.$('#special-decision button')) { const btns = await p.$$('#special-decision button'); await btns[POLICY === 'safe' ? 0 : btns.length - 1].click(); out.specialDecisions = (out.specialDecisions || 0) + 1; await p.waitForTimeout(100); }
       if (await p.$('#phone-card button')) { await chooseBtn('#phone-card button'); await p.waitForTimeout(100); out.arcs.musti = (out.arcs.musti || 0) + 1; }
       await p.click('#btn-news-go'); continue;
     }
@@ -39,6 +40,7 @@ const log = (...a) => { if (args.verbose) console.log(...a); };
     if (await visible('#s-dayend')) {
       if (await p.$('#de-knock button')) { await chooseBtn('#de-knock button'); out.arcs.nuri = (out.arcs.nuri || 0) + 1; await p.waitForTimeout(100); }
       if (await p.$('#btn-taksit:not([disabled])')) { await p.click('#btn-taksit'); out.taksitPaid++; await p.waitForTimeout(100); if (await visible('#s-win')) continue; }
+      if (await p.evaluate(() => wear() >= 60)) { await p.click('#btn-toggle-shop'); const sb = await p.$('#btn-service:not([disabled])'); if (sb) { await sb.click(); out.services = (out.services || 0) + 1; } }
       const st = await p.evaluate(() => ({ day: S.day, money: S.money, rating: +S.rating.toFixed(2), energy: S.energy, wear: wear(), complaints: S.complaints, accepted: S.accepted, taskDone: !!(S.task && S.task.done), net: S.lastNet, hook: $('btn-sleep').textContent }));
       out.days.push(st); if (st.taskDone) out.tasksDone++;
       log(`day ${st.day}: money ${st.money} net ${st.net} rating ${st.rating} energy ${st.energy} wear ${st.wear}% complaints ${st.complaints} | ${st.hook}`);
@@ -59,7 +61,7 @@ const log = (...a) => { if (args.verbose) console.log(...a); };
   if (args.json) console.log(JSON.stringify(out, null, 1));
   else {
     out.days.forEach(d => console.log(`day ${d.day}: money ${d.money} net ${d.net} rating ${d.rating} energy ${d.energy} wear ${d.wear}% complaints ${d.complaints} | ${d.hook}`));
-    console.log('events:', out.events); console.log('arcs:', out.arcs, 'tasksDone:', out.tasksDone, 'taksit:', out.taksitPaid, 'newAccounts:', out.newAccounts || 0);
+    console.log('events:', out.events); console.log('arcs:', out.arcs, 'tasksDone:', out.tasksDone, 'taksit:', out.taksitPaid, 'newAccounts:', out.newAccounts || 0, 'services:', out.services || 0, 'specialDecisions:', out.specialDecisions || 0);
     console.log('ended:', out.ended || 'still playing'); console.log('errors:', errs.length ? errs : 'none');
   }
   process.exit(errs.length ? 1 : 0);

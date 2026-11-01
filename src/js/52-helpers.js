@@ -1,6 +1,9 @@
 /* ---------------- YARDIMCILAR ---------------- */
 const $ = id => document.getElementById(id);
 const fmt = n => Math.round(n).toLocaleString('tr-TR') + ' ₺';
+const xfmt = n => String(+(+n).toFixed(2)).replace('.', ','); // çarpan: 1.6 → "1,6"
+/* Cömert harcama (ilişki + eksi para) iç seste 'Başarısız' sayılmasın */
+function voiceEffects(e){ e = e || {}; if(e.money < 0 && e.rel && Object.values(e.rel).some(v => v > 0) && !(e.rating < 0 || e.complaint || e.feeLost)) return Object.assign({}, e, { money:0 }); return e; }
 const rnd = (a,b) => a + Math.random()*(b-a);
 const rint = (a,b) => Math.floor(rnd(a,b+1));
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];

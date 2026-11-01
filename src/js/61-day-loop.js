@@ -42,6 +42,8 @@ function startDay(){
   S.todayMods = { feeMult: roll.mods.feeMult * (S.tomorrowFeeMult || 1), tipMult: roll.mods.tipMult, eventChance: roll.mods.eventChance }; S.tomorrowFeeMult = 1;
   S.todayTags = roll.tags.slice(); S.weather = roll.weather; S.streak = 0; S.breakNext = false; S.usedNotes = []; S.resourceToday = {}; S.warnedToday = false; S.cbToday = false; S.nightDeliveries = 0; S.surgeRounds = [];
   S.energy = clamp(CONFIG.energyMax + P('startEnergyBonus', 0), 0, CONFIG.energyMax + 10);
+  S.dayStartRating = S.rating; S.specialDecided = false;
+  if(hasFact('nuri_lesson') && fact('nuri_lesson').day + 1 === S.day){ S.orderLog[0] = 'break'; S.orderIdx = 1; S.lessonMorning = true; } else S.lessonMorning = false;
   S.dayExpense = P('dailyExpense', CONFIG.dailyExpense) + S.extraDaily + roll.expense;
   if(S.newAccountDays > 0){ S.todayTags.push('yeni_hesap'); if(S.newAccountDays === 3) S.todayMods.feeMult *= 0.85; S.newAccountDays--; }
   // şikayet erimesi
@@ -78,7 +80,7 @@ function startDay(){
 function activeRuleEffects(){
   const out = {}; if(typeof RULES === 'undefined') return out;
   S.rules.forEach(id => { const r = RULES.find(x => x.id === id); if(!r) return; const e = r.effect || {}; Object.keys(e).forEach(k => { if(k === 'feeMult') out.feeMult = (out.feeMult||1) * e.feeMult; else if(k === 'expense') out.expense = (out.expense||0) + e.expense; else out[k] = e[k]; }); });
-  if(S.program && typeof PROGRAMS !== 'undefined'){ const p = PROGRAMS.find(x => x.id === S.program); if(p && p.effect){ if(p.effect.feeMult) out.feeMult = (out.feeMult||1) * p.effect.feeMult; Object.keys(p.effect).forEach(k => { if(k !== 'feeMult') out[k] = p.effect[k]; }); } }
+  if(S.program && typeof PROGRAMS !== 'undefined'){ const p = PROGRAMS.find(x => x.id === S.program); if(p && p.effect){ Object.keys(p.effect).forEach(k => { if(k === 'feeMult') out.feeMult = (out.feeMult||1) * p.effect.feeMult; else if(k === 'expense') out.expense = (out.expense||0) + p.effect.expense; else if(k === 'tipMult') out.tipMult = (out.tipMult||1) * p.effect.tipMult; else out[k] = p.effect[k]; }); } }
   return out;
 }
 
@@ -92,8 +94,8 @@ function renderBulletin(roll, priceCard){
   }
   roll.newsIds.forEach(id => {
     const n = NEWS.find(x => x.id === id); if(!n) return; const e = n.effect || {}; const tags = [];
-    if(e.feeMult) tags.push(`<span class="tag info">Bugün ücretler ×${e.feeMult}</span>`);
-    if(e.tipMult) tags.push(`<span class="tag info">Bugün bahşiş ×${e.tipMult}</span>`);
+    if(e.feeMult) tags.push(`<span class="tag info">Bugün ücretler ×${xfmt(e.feeMult)}</span>`);
+    if(e.tipMult) tags.push(`<span class="tag info">Bugün bahşiş ×${xfmt(e.tipMult)}</span>`);
     if(e.expense) tags.push(`<span class="tag up">Bugün ek gider +${fmt(e.expense)}</span>`);
     if(e.eventChance === 0) tags.push(`<span class="tag">Bugün olay yok</span>`);
     if(!Object.keys(e).length) tags.push(`<span class="tag">Etkisi yok. Şimdilik.</span>`);
@@ -102,15 +104,31 @@ function renderBulletin(roll, priceCard){
   if(roll.rule && typeof RULES !== 'undefined'){ const r = RULES.find(x => x.id === roll.rule); if(r) cards.push(`<div class="card news platform"><div class="kicker">KULLANIM KOŞULLARI GÜNCELLENDİ</div><h3>${esc(r.title)}</h3><p class="muted">${esc(r.body)}</p><div class="delta"><span class="tag info">Madde ${S.rules.length + 13}/b · Kabul edilmiş sayılır</span></div></div>`); }
   if(S.special && typeof SPECIAL_DAYS !== 'undefined'){ const sp = SPECIAL_DAYS.find(s => s.id === S.special.id); if(sp){
     if(S.special.announce) cards.push(`<div class="card news"><div class="kicker">${S.special.day - S.day} GÜN SONRA</div><h3>${esc(sp.emoji||'⭐')} ${esc(sp.name)}</h3><p class="muted">${esc(sp.announce)}</p></div>`);
-    else cards.push(`<div class="card news" style="border-left-color:var(--accent2)"><div class="kicker" style="color:var(--accent2)">BUGÜN ÖZEL GÜN</div><h3>${esc(sp.emoji||'⭐')} ${esc(sp.name)}</h3><p class="muted">${esc(sp.morning)}</p><div class="delta"><span class="tag info">Hedef: ${sp.target.deliveries} teslimat, en fazla ${sp.target.maxComplaints} şikayet</span>${sp.effect.feeMult?`<span class="tag info">Ücretler ×${sp.effect.feeMult}</span>`:''}</div></div>`);
+    else cards.push(`<div class="card news" style="border-left-color:var(--accent2)"><div class="kicker" style="color:var(--accent2)">BUGÜN ÖZEL GÜN</div><h3>${esc(sp.emoji||'⭐')} ${esc(sp.name)}</h3><p class="muted">${esc(sp.morning)}</p><div class="delta"><span class="tag info">Hedef: ${sp.target.deliveries} teslimat, en fazla ${sp.target.maxComplaints} şikayet</span>${sp.effect.feeMult?`<span class="tag info">Ücretler ×${xfmt(sp.effect.feeMult)}</span>`:''}</div></div>`);
+    if(!S.special.announce && sp.decision && !S.specialDecided) cards.push(`<div id="special-decision"></div>`);
   } }
-  if(isWeekend() && S.day > 1){ S.todayTags.push('weekend'); S.todayMods.feeMult *= CONFIG.weekendFeeMult; cards.push(`<div class="card wxcard"><div class="ico">🎉</div><div><h3>Hafta sonu</h3><p class="muted small">Pijamalı kapılar, uzun siparişler, geç kahvaltılar. Ücretler yüksek.</p><div class="delta" style="margin-top:6px"><span class="tag info">Ücretler ×${CONFIG.weekendFeeMult}</span></div></div></div>`); }
+  if(isWeekend() && S.day > 1){ S.todayTags.push('weekend'); S.todayMods.feeMult *= CONFIG.weekendFeeMult; cards.push(`<div class="card wxcard"><div class="ico">🎉</div><div><h3>Hafta sonu</h3><p class="muted small">Pijamalı kapılar, uzun siparişler, geç kahvaltılar. Ücretler yüksek.</p><div class="delta" style="margin-top:6px"><span class="tag info">Ücretler ×${xfmt(CONFIG.weekendFeeMult)}</span></div></div></div>`); }
   const w = wx(); S.todayMods.feeMult *= w.feeMult;
-  cards.push(`<div class="card wxcard"><div class="ico">${w.emoji}</div><div><h3>Bugün hava: ${w.name}</h3><p class="muted small">${esc(w.blurb)}</p><div class="delta" style="margin-top:6px">${w.feeMult!==1?`<span class="tag info">Ücretler ×${w.feeMult}</span>`:''}${w.risk?`<span class="tag up">Olay riski ↑</span>`:''}</div></div></div>`);
+  cards.push(`<div class="card wxcard"><div class="ico">${w.emoji}</div><div><h3>Bugün hava: ${w.name}</h3><p class="muted small">${esc(w.blurb)}</p><div class="delta" style="margin-top:6px">${w.feeMult!==1?`<span class="tag info">Ücretler ×${xfmt(w.feeMult)}</span>`:''}${w.risk?`<span class="tag up">Olay riski ↑</span>`:''}</div></div></div>`);
   if(S.task) cards.push(taskHTML());
   if(S.todayArc && S.todayArc.mode === 'phone') cards.push(`<div id="phone-card"></div>`);
   $('news-list').innerHTML = cards.join('');
   if(S.todayArc && S.todayArc.mode === 'phone') renderPhoneCard();
+  if($('special-decision')) renderSpecialDecision();
+  $('btn-news-go').textContent = S.shiftEnded ? 'Günü kapat' : (S.lessonMorning ? 'Mesaiye başla (ilk tur Nuri Bey\'e gitti)' : 'Mesaiye Başla');
+}
+/* Özel gün sabah kararı (ör. boykot): seçilen etkiler normal yoldan; closeShift ise vardiya açılmaz */
+function renderSpecialDecision(){
+  const host = $('special-decision'); const sp = SPECIAL_DAYS.find(s => s.id === S.special.id); if(!host || !sp || !sp.decision) return;
+  const dcs = sp.decision;
+  host.innerHTML = `<div class="card accent"><div class="event-title">SABAH KARARI</div><p class="event-text" style="margin-top:8px">${esc(dcs.text)}</p><div class="actions one" id="sd-choices" style="margin-top:10px">${dcs.choices.map((c,i)=>`<button class="btn" data-i="${i}">${esc(c.label)}</button>`).join('')}</div><div id="sd-result" hidden></div></div>`;
+  host.querySelectorAll('button').forEach(b => b.onclick = () => {
+    const c = dcs.choices[+b.dataset.i]; const out = pickOutcome(c);
+    const saved = S.current; S.current = null; const d = applyEffects(out.effects || {}); S.current = saved;
+    S.specialDecided = true; if(c.closeShift || out.closeShift){ S.shiftEnded = true; $('btn-news-go').textContent = 'Günü kapat'; }
+    $('sd-choices').hidden = true; $('sd-result').innerHTML = `<div class="result-box" style="margin-top:8px">${esc(out.result||'')}</div><div class="delta" style="margin-top:6px">${d.map(x=>`<span class="${x.v>=0?'plus':'minus'}">${esc(x.t)}</span>`).join('')}</div>`; $('sd-result').hidden = false;
+    renderHUD(); save();
+  });
 }
 function renderCalendar(){
   const cells = [];
@@ -206,7 +224,7 @@ function genOrder(opts={}){
   if(S.special && S.special.day === S.day && S.special.id === 'kar') km = Math.max(5, km);
   const lines = buildLines(r);
   const total = lines.reduce((t,l)=>t+l.price*l.qty, 0), bulk = lines.reduce((t,l)=>t+l.qty, 0);
-  const fee = Math.round(feeFor(km, bulk, opts.roundIdx) * (opts.feeMult || 1));
+  const fee = Math.round(feeFor(km, bulk, opts.roundIdx) * (opts.feeMult || 1) * (hasFact('nuri_moved') && d.name === 'Kağıthane' ? 1.1 : 1));
   if(regular && regular.note) note = { text: regular.note.replace('{floor}', addr.floor).replace('{apt}', addr.apt), key: regular.noteKey, value: regular.noteValue };
   else if(returning) note = { text: returning.lastGood ? pick(['Geçen seferki kurye gibi olsun lütfen.','Kapıyı biliyorsunuz zaten.','Yine siz misiniz? Güzel.']) : (returning.lastEvent && /KÖPEK/i.test(returning.lastEvent) ? 'Köpek yok artık. Lütfen paketi fırlatmayın.' : pick(['Bu sefer düzgün olsun.','Geçen sefer sorun yaşandı, dikkat.','Zile bir kere basın yeter.'])), key:null };
   else if(opts.story) note = { text: opts.note || '', key: opts.noteKey || null, value: opts.noteValue };
@@ -220,19 +238,19 @@ function genOrder(opts={}){
     district:d.name, districtDat:d.dat, districtTip:d.tip, blurb: blurbs ? (isNight() ? blurbs.night : blurbs.day) || d.blurb : d.blurb, km, fee, fuel: km*CONFIG.fuelPerKm,
     eta: 8 + km*3 + rint(0,6), note: note.text, noteKey: note.key, noteValue: note.value,
     story: opts.story ? opts.story.arc : null, returning: !!returning, returningNote: returning ? returning.lastEvent : null, voice: regular ? regular.voice : (returning ? returning.voice : null),
-    surge: S.surgeRounds.includes(S.orderIdx + 1)
+    surge: S.surgeRounds.includes(S.orderIdx + 1), taken: opts.taken || null
   };
 }
 function ticketHTML(o, idx){
-  const tag = o.story ? `<div class="tagline">Tanıdık adres · ${esc(o.building)}</div>` : (o.returning ? `<div class="tagline ret">Geri dönen${o.returningNote ? ' · ' + esc(o.returningNote.toLowerCase()) : ''}</div>` : '');
-  return `<div class="ticket pick ${o.story?'story-ticket':''}" data-i="${idx}">
+  const tag = o.taken ? `<div class="tagline" style="background:#8a1c1c">${esc(o.taken)} aldı</div>` : o.story ? `<div class="tagline">Tanıdık adres · ${esc(o.building)}</div>` : (o.returning ? `<div class="tagline ret">Geri dönen${o.returningNote ? ' · ' + esc(o.returningNote.toLowerCase()) : ''}</div>` : '');
+  return `<div class="ticket pick ${o.story?'story-ticket':''} ${o.taken?'dim':''}" data-i="${idx}">
     ${tag}<div class="rest">${esc(o.rest)}</div>
     <div class="note" style="margin:0 0 6px">${esc(o.restTag)}</div>
     <div class="items">${o.lines.map(l=>`<span><span>${l.emoji} ${l.qty}× ${esc(l.name)}</span><span>${fmt(l.price*l.qty)}</span></span>`).join('')}</div>
     <div class="addr"><b>${esc(o.customer)}</b> · ${esc(o.hood)}, ${esc(o.street)} No:${o.no} ${esc(o.building)}, Kat ${o.floor}, Daire ${o.apt}<br>${esc(o.district)} · ${o.km} km · ~${o.eta} dk</div>
     ${o.note ? `<div class="note" ${S.day===1 && S.orderIdx===0 ? 'style="background:#ffe9a8;padding:4px 6px;border-radius:4px"' : ''}>“${esc(o.note)}”</div>` : ''}
-    <div class="meta"><div class="l">Sipariş tutarı ${fmt(o.total)}<br><span class="pay">${o.payment==='nakit'?'KAPIDA NAKİT':'ONLINE ÖDENDİ'}</span><br>Benzin ≈ −${fmt(o.fuel)} · Enerji ≈ −${energyCost(o)}</div><div style="text-align:right"><div class="fee">${fmt(o.fee)}</div>${o.surge?'<div class="surge">🔥 yoğunluk ×1,5</div>':''}${isNight()?'<div class="small" style="color:#8a1c1c;font-weight:700">🌙 gece ×'+CONFIG.nightFeeMult+'</div>':''}</div></div>
-    <button class="take" data-i="${idx}">Bu siparişi al</button>
+    <div class="meta"><div class="l">Sipariş tutarı ${fmt(o.total)}<br><span class="pay">${o.payment==='nakit'?'KAPIDA NAKİT':'ONLINE ÖDENDİ'}</span><br>Benzin ≈ −${fmt(o.fuel)} · Enerji ≈ −${energyCost(o)}</div><div style="text-align:right"><div class="fee">${fmt(o.fee)}</div>${o.surge?'<div class="surge">🔥 yoğunluk ×1,5</div>':''}${isNight()?'<div class="small" style="color:#8a1c1c;font-weight:700">🌙 gece ×'+xfmt(CONFIG.nightFeeMult)+'</div>':''}</div></div>
+    <button class="take" data-i="${idx}" ${o.taken?'disabled':''}>${o.taken ? 'Alındı' : 'Bu siparişi al'}</button>
   </div>`;
 }
 function renderDots(){
@@ -240,7 +258,7 @@ function renderDots(){
 }
 function makeOffers(){
   if(S.day === 1 && S.orderIdx === 0){ // öğretici: tek fiş, Köfteci Yakup → Ayşe K., Moda
-    const o = genOrder({ story:{ arc:null, address:{ district:'Kadıköy', hood:'Moda', street:'Moda Cad.', no:14, building:'Yıldız Apt.', floor:3, apt:7, customer:'Ayşe K.' } }, noteKey:'knock' });
+    const o = genOrder({ story:{ arc:null, address:{ district:'Kadıköy', hood:'Moda', street:'Moda Cad.', no:14, building:'Yıldız Apt.', floor:3, apt:7, customer:'Ayla Ş.' } }, noteKey:'knock' });
     o.rest = 'Köfteci Yakup'; const r = RESTAURANTS.find(x => x.name === o.rest); if(r){ o.restTag = r.tag; o.lines = [{ emoji:r.menu[0][0], name:r.menu[0][1], price:r.menu[0][2], qty:1 }, { emoji:'🥛', name:'Ayran', price:50, qty:2 }]; o.total = o.lines.reduce((t,l)=>t+l.price*l.qty,0); }
     o.km = 2; o.fee = 212; o.fuel = 12; o.eta = 14; o.story = (S.todayArc && S.todayArc.arc === 'hayri' && S.todayArc.round === 1) ? 'hayri' : null; o.payment = 'online';
     return [o];
@@ -254,7 +272,10 @@ function makeOffers(){
   const offers = [];
   if(S.todayArc && S.todayArc.mode === 'ticket' && !S.arcDone && S.orderIdx + 1 === S.todayArc.round){ const beat = todayBeat(); if(beat) offers.push(genOrder({ story:{ arc:S.todayArc.arc, address:beat.address } })); }
   if(S.day > 1 && META.customers.length >= 3 && Math.random() < CONFIG.returningChance){ const c = pick(META.customers); offers.push(genOrder({ returning:c })); }
-  while(offers.length < n) offers.push(genOrder());
+  // rakipler: Nuri Bey ya da Musti kurye olduğu gün bir fişi kapmış olur
+  const rival = ['nuri_rival','musti_rival'].find(f => hasFact(f) && fact(f).day + 1 === S.day);
+  if(rival && offers.length < n + 1) offers.push(genOrder({ taken: rival === 'nuri_rival' ? 'Nuri Bey' : 'Musti' }));
+  while(offers.length < n + (rival ? 1 : 0)) offers.push(genOrder());
   return offers;
 }
 function nextOrder(){
@@ -279,7 +300,7 @@ function renderOrderScreen(auto){
   else if(acceptRate() < 0.7 && S.offered >= 4) hint = 'Algoritma sana ucuz siparişleri gösteriyor. Tur geçmek bedava değildi.';
   else if(S.rating < 3.5) hint = 'Puanınız 3,5\'in altında. Fırsatlar sizin için yeniden sıralandı 💙';
   else if(S.streak >= CONFIG.streakBonusAt-1) hint = `${S.streak} teslimat üst üste. Bir tane daha: ${fmt(CONFIG.streakBonus)} Performans Bonusu! 🔥`;
-  else if(isNight() && curHour() === CONFIG.nightFrom) hint = `Gece tarifesi başladı: ücretler ×${CONFIG.nightFeeMult} 🌙`;
+  else if(isNight() && curHour() === CONFIG.nightFrom) hint = `Gece tarifesi başladı: ücretler ×${xfmt(CONFIG.nightFeeMult)} 🌙`;
   else if(S.energy < CONFIG.energyLow) hint = `Enerjin ${S.energy}. Dikkatin dağınık, her şey biraz daha riskli.`;
   else hint = pick(PLATFORM_MSGS);
   $('order-hint').innerHTML = `<b>🔔 KapitalEats</b><span>${hint}</span>`;

@@ -149,7 +149,7 @@ function renderYarin(){
   const t = S.tomorrow; if(!t){ $('de-yarin').innerHTML = ''; return; }
   const w = WEATHER[t.weather] || WEATHER.sunny; const n = NEWS.find(x => x.id === t.newsIds[0]);
   const leakOk = Math.random() < 0.8 || S.leakShown; S.leakShown = true; S.leakWrong = !leakOk;
-  const wxLine = leakOk ? `${w.emoji} ${w.name}${t.mods.feeMult !== 1 ? `, ücret ×${t.mods.feeMult.toFixed(2).replace(/\.?0+$/,'')}` : ''}${n ? ` · ${n.kicker.toLowerCase()}: ${n.headline}` : ''}` : `${pick(Object.values(WEATHER)).emoji} Meteoroloji "parçalı" dedi. Her şey olabilir.`;
+  const wxLine = leakOk ? `${w.emoji} ${w.name}${t.mods.feeMult !== 1 ? `, ücret ×${xfmt(t.mods.feeMult)}` : ''}${n ? ` · ${n.kicker.toLowerCase()}: ${n.headline}` : ''}` : `${pick(Object.values(WEATHER)).emoji} Meteoroloji "parçalı" dedi. Her şey olabilir.`;
   const hook = tomorrowHook(); S.hookShort = hook.short;
   const size = taksitSize(); const need = size - S.money;
   const taksitLine = !S.goalId ? '' : S.taksitPaid >= CONFIG.taksitCount ? 'Kutu yolda.' : need <= 0 ? `${S.taksitPaid+1}. taksit hazır, ödemedin. Sabah yine burada.` : `${S.taksitPaid+1}. taksite ${fmt(need)}: ${Math.ceil(need / Math.max(300, avgNet())) <= 1 ? 'iyi bir günle bir gün' : Math.ceil(need / Math.max(300, avgNet())) + ' gün'}.`;
@@ -195,6 +195,10 @@ function showWeek(){
     </div>
     <div class="awards">${awards.map(a=>`<div class="award"><div class="ico">${a[0]}</div><div><b>${a[1]}</b><div class="small muted">${esc(a[2])}</div></div></div>`).join('')}</div>
     <div class="cert-stamp">ONAYLANDI<br><span>otomatik</span></div>`;
+  if(typeof PROGRAMS !== 'undefined' && wk >= 1){ const avail = PROGRAMS.filter(p => { try{ return !p.cond || p.cond(S); }catch(e){ return false; } });
+    $('cert').insertAdjacentHTML('afterend', `<div class="card" id="programs"><div class="kicker" style="color:var(--info);font-family:var(--display);font-size:9px">PROGRAMLAR</div><p class="small muted">Haftada bir program seçilebilir. ${S.program ? 'Aktif: ' + esc((PROGRAMS.find(p=>p.id===S.program)||{}).name||'') : 'Şu an programda değilsiniz.'}</p>${avail.map(p => `<div class="review" style="margin-top:8px"><div class="who">${esc(p.name)}</div><div class="small">${esc(p.body)}</div><button class="btn ${S.program===p.id?'ghost':'primary'}" data-p="${p.id}" style="margin-top:8px">${S.program===p.id?'Programdan ayrıl':'Katıl'}</button></div>`).join('') || '<div class="small muted">Henüz davet yok.</div>'}</div>`);
+    document.querySelectorAll('#programs button').forEach(b => b.onclick = () => { S.program = S.program === b.dataset.p ? null : b.dataset.p; Sfx.click(); save(); const old = $('programs'); if(old) old.remove(); showWeek(); });
+  } else { const old = $('programs'); if(old) old.remove(); }
   Sfx.tada(); Haptic.big();
   show('s-week');
 }

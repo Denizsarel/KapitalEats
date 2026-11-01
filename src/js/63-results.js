@@ -13,7 +13,7 @@ function finishDelivery(){
   if(isNight()) S.nightDeliveries++;
   // puan: olaysız teslimat küçük artı; ilk günler taban 3,0
   if(!c.eventId && S.rating < CONFIG.ratingSoftCap) c.ratingDelta = (c.ratingDelta||0) + CONFIG.ratingRecover;
-  S.rating = clamp(S.rating + (c.ratingDelta||0), S.day <= CONFIG.ratingFloorDays ? 3.0 : 1, 5);
+  S.rating = clamp(S.rating + (c.ratingDelta||0), Math.max(S.day <= CONFIG.ratingFloorDays ? 3.0 : 1, (S.dayStartRating || 5) - 1), 5); // bir günde en fazla 1 puan düşer
   if(c.eventId) S.cleanStreak = 0; else S.cleanStreak++;
   S.dayDeliveries.push({ customer:o.customer, rest:o.rest, item:o.lines.slice().sort((x,y)=>y.price-x.price)[0].name, delta:c.ratingDelta||0, tip:c.tip, bad:!!c.bad, eventId:c.eventId||null, night:isNight(), floor:o.floor, noteKey:o.noteKey||null, voice:o.voice||null });
   rememberCustomer(o, c);

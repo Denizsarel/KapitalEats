@@ -93,7 +93,7 @@ function resolveChoice(ev, idx){
   else { (META.seenEvents[ev.id] = META.seenEvents[ev.id] || []).push(idx); track('event', { eventId: ev.id, label: choice.label }); }
   $('ev-choices').hidden = true;
   $('ev-result-text').textContent = out.result || '';
-  const v = innerVoice(out.effects, ev.beat ? ev.arc : ev.id);
+  const v = innerVoice(voiceEffects(out.effects), ev.beat ? ev.arc : ev.id);
   if(v && v.kind === 'fail'){ Sfx.buzz(); Haptic.bad(); } else if(v){ Sfx.coin(); }
   $('ev-voice').hidden = !v;
   if(v){ $('ev-voice').className = 'voice ' + v.kind; $('ev-voice').innerHTML = `<b>[${esc(v.q[0])} · ${v.kind==='fail'?'Başarısız':'Başarılı'}]</b> ${esc(v.q[1])}`; }
@@ -121,7 +121,7 @@ function applyEffects(e){
   if(e.money){ c.extraMoney += e.money; d.push({t:`${e.money>0?'+':''}${fmt(e.money)}`, v:e.money}); }
   if(e.feeLost){ c.feeLost = true; d.push({t:`Ücret ödenmedi (−${fmt(o.fee)})`, v:-1}); }
   if(e.rating){ c.ratingDelta = (c.ratingDelta||0) + e.rating; d.push({t:`${e.rating>0?'+':''}${e.rating.toFixed(1)} ⭐`, v:e.rating}); }
-  if(e.complaint){ c.ratingDelta = (c.ratingDelta||0) - 0.3; S.offered += 1; S.complaints += 1; S.lastComplaintDay = S.day; S.week.complaints += 1; if(S.special && S.special.day === S.day) S.specialStats.complaints++; d.push({t:`Müşteri şikayeti (${S.complaints}/${CONFIG.maxComplaints})`, v:-1}); c.bad = true; }
+  if(e.complaint){ const dbl = activeRuleEffects().complaintsDouble ? 2 : 1; c.ratingDelta = (c.ratingDelta||0) - 0.3; S.offered += 1; S.complaints += dbl; S.lastComplaintDay = S.day; S.week.complaints += 1; if(S.special && S.special.day === S.day) S.specialStats.complaints++; d.push({t:`Müşteri şikayeti (${S.complaints}/${CONFIG.maxComplaints})`, v:-1}); c.bad = true; }
   if(e.goalPrice && S.goalId){ const old = S.goalPrice; S.goalPrice = Math.min(Math.round(old*e.goalPrice/10)*10, Math.round(S.goalBase*CONFIG.goalInflationCap/10)*10); d.push({t:`Hedef fiyatı ${fmt(old)} → ${fmt(S.goalPrice)}`, v: e.goalPrice>1?-1:1}); flashPrice(e.goalPrice>1); }
   if(e.breakNext){ S.breakNext = true; d.push({t:'☕ Sonraki tur: mola', v:0}); }
   if(e.expense){ S.dayExpense = Math.max(0, S.dayExpense + e.expense); d.push({t:`Günlük gider ${e.expense<0?'−':'+'}${fmt(Math.abs(e.expense))}`, v:-e.expense}); }
@@ -142,7 +142,7 @@ function applyEffects(e){
   if(e.energy){ S.energy = clamp(S.energy + e.energy, 0, CONFIG.energyMax); if(e.energy > 0) c.energyGain = (c.energyGain||0) + e.energy; d.push({t:`⚡ ${e.energy>0?'+':''}${e.energy}`, v:e.energy}); }
   if(e.giftItem){ const pool = SHOP.filter(x => !META.owned.includes(x.id) && x.price > 0 && x.price <= 2800 && x.slot !== 'side' && !x.hidden); const ferhat = SHOP.find(x => x.id === 'helmet_ferhat'); const g = (S.arcCtx && S.arcCtx === META.arcs.ferhat && ferhat && !META.owned.includes('helmet_ferhat')) ? ferhat : (pool.length ? pick(pool) : null); if(g){ META.owned.push(g.id); META.equipped[g.slot] = g.id; META.gifts.push(g.id); renderAllAvatars(); d.push({t:`🎁 ${g.name}`, v:1}); } else { c.extraMoney += 100; d.push({t:'+100 ₺', v:1}); } }
   if(e.skipDelivery){ c.skip = true; }
-  if(c.standalone){ S.money += (c.tip||0) + (c.extraMoney||0); if(c.ratingDelta) S.rating = clamp(S.rating + c.ratingDelta, 1, 5); }
+  if(c.standalone){ S.money += (c.tip||0) + (c.extraMoney||0); if(c.ratingDelta) S.rating = clamp(S.rating + c.ratingDelta, Math.max(1, (S.dayStartRating||5) - 1), 5); }
   return d;
 }
 /* Telefon kartı (Musti) sabah bülteninde; kapı kartı (Nuri Bey) gün sonunda. Aynı yapı, farklı kap. */
@@ -160,7 +160,7 @@ function renderArcCard(hostId, kind){
     S.arcCtx = A; const saved = S.current; S.current = null; const d = applyEffects(out.effects || {}); S.current = saved; S.arcCtx = null;
     advanceArc(S.todayArc.arc, beat, choice);
     META.storyLog.push({ day:S.day, arc:S.todayArc.arc, step:beat.step, label:choice.label });
-    const v = innerVoice(out.effects, S.todayArc.arc);
+    const v = innerVoice(voiceEffects(out.effects), S.todayArc.arc);
     $(hostId+'-choices').hidden = true;
     $(hostId+'-result').innerHTML = `<div class="result-box" style="margin-top:8px">${esc(out.result||'')}</div>${v?`<div class="voice ${v.kind}" style="margin-top:6px"><b>[${esc(v.q[0])} · ${v.kind==='fail'?'Başarısız':'Başarılı'}]</b> ${esc(v.q[1])}</div>`:''}<div class="delta" style="margin-top:6px">${d.map(x=>`<span class="${x.v>=0?'plus':'minus'}">${esc(x.t)}</span>`).join('')}</div>`;
     $(hostId+'-result').hidden = false;

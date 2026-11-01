@@ -1,7 +1,7 @@
 /* ---------------- OLAY BAĞLAMA ---------------- */
 $('btn-start').onclick = startGame;
 $('btn-goal-go').onclick = () => { if(selectedGoal) chooseGoal(selectedGoal); };
-$('btn-news-go').onclick = () => { nextOrder(); };
+$('btn-news-go').onclick = () => { if(S.shiftEnded) endDay(); else nextOrder(); };
 $('btn-ev-next').onclick = () => {
   if(S.boxDelivered && currentEvent && currentEvent.id === 'kargo_ferhat'){ finishDelivery(); return; }
   if(S.current && S.current.skip){ S.rating = clamp(S.rating + (S.current.ratingDelta||0),1,5); S.money += S.current.extraMoney + S.current.tip - S.current.order.fuel; S.dayFuel += S.current.order.fuel; S.orderIdx++; renderHUD(); if(!checkFired()) nextOrder(); }
@@ -34,7 +34,9 @@ function showAway(){
   const hook = tomorrowHook();
   let html = `<p><b>Gün ${S.day}</b> · ${wx().emoji} ${wx().name}${S.goalId ? ` · ${goal().emoji} ${S.taksitPaid}/${CONFIG.taksitCount} taksit` : ''}</p><p class="small">${esc(hook.hook)}</p>`;
   if(hours >= 0.25){
-    if(side){
+    if(side && side.id === 'side_cousin' && hasFact('musti_gone') && S.day < fact('musti_gone').day + 5){
+      html += `<p class="small muted" style="margin-top:8px">${h} saat yoktun. Motor park halinde; Musti ortada yok, kira da yok.</p>`;
+    } else if(side){
       const gross = Math.round(side.idle.perHour * hours), cut = Math.round(gross * side.idle.cut), net = gross - cut;
       S.money += net;
       html += `<div class="summary" style="margin-top:8px"><span>${esc(side.name)} · ${h} saat</span><span>+${fmt(gross)}</span><span>Kesinti (benzin, komisyon)</span><span style="color:var(--bad)">−${fmt(cut)}</span><span class="tot">Hesabına geçen</span><span class="tot" style="color:var(--good)">+${fmt(net)}</span></div>`;
